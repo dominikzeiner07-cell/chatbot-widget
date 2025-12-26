@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Widget</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Chat-Launcher: Button + kleine “Ich bin hier …”-Bubble -->
+  <div id="cw-launcher-wrap">
+    <div id="cw-greeting" class="cw-greeting">
+      <span>Ich bin hier, falls du Hilfe benötigst!</span>
+      <button class="cw-greeting-close" aria-label="Begrüßung schließen">×</button>
+    </div>
+
+    <button id="cw-launcher" aria-label="Chat öffnen">
+      <span class="cw-launcher-icon">💬</span>
+    </button>
+  </div>
+
+  <!-- Das Chat-Fenster -->
+  <aside id="cw-window" class="cw-window cw-hidden" role="dialog" aria-label="Support-Chat">
+    <!-- Header -->
+    <header class="cw-header">
+      <div class="cw-header-left">
+        <div class="cw-header-avatar">
+          <span>AI</span>
+        </div>
+
+        <div class="cw-header-texts">
+          <div class="cw-header-title">Ich helfe dir gerne!</div>
+          <div class="cw-header-subline">
+            <span class="cw-header-status">Online</span>
+            <span class="cw-header-separator">–</span>
+            <span class="cw-header-brand">powered by ChatBasis</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="cw-close" id="cw-close" aria-label="Fenster schließen">×</button>
+    </header>
+
+    <!-- Nachrichtenbereich -->
+    <main class="cw-body" id="cw-body" aria-live="polite"></main>
+
+    <!-- Composer -->
+    <form class="cw-composer" id="cw-form">
+      <input
+        id="cw-input"
+        class="cw-input"
+        type="text"
+        maxlength="1000"
+        autocomplete="off"
+        placeholder="Schreib eine Nachricht…"
+        aria-label="Nachricht eingeben"
+      />
+      <button id="cw-send" class="cw-send" type="submit" aria-label="Senden">
+        <span class="cw-send-arrow">➤</span>
+      </button>
+    </form>
+  </aside>
+
+  <!-- Konfig für dieses Widget -->
+  <script>
+    window.CHATBOT_API_BASE = "http://localhost:5051";
+    window.CHATBOT_WIDGET_KEY = "270f20d8f5f04a1cb4cd0fdceb588ed7";
+  </script>
+
+  <!-- Logic -->
+  <script src="script.js"></script>
+</body>
+</html>
