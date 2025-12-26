@@ -13,37 +13,38 @@
     document.head.appendChild(link);
   }
 
-  // --- 3) HTML einfügen (nur einmal)
+  // --- 3) HTML einfügen (nur einmal) ✅ FIX: cw-launcher-wrap direkt an body
   if (!document.getElementById("cw-launcher-wrap")) {
-    const wrap = document.createElement("div");
-    wrap.innerHTML = `
-      <div id="cw-launcher-wrap">
-        <div id="cw-greeting">
-          <span class="cw-greeting-text"></span>
-          <button class="cw-greeting-close" type="button">×</button>
+    const root = document.createElement("div");
+    root.id = "cw-launcher-wrap";
+
+    root.innerHTML = `
+      <div id="cw-greeting">
+        <span class="cw-greeting-text"></span>
+        <button class="cw-greeting-close" type="button">×</button>
+      </div>
+
+      <button id="cw-launcher" type="button" aria-label="Chat öffnen"></button>
+
+      <div id="cw-window" class="cw-hidden">
+        <div id="cw-header" class="cw-header">
+          <div id="cw-title" class="cw-title">Support</div>
+          <button id="cw-close" type="button" aria-label="Chat schließen">×</button>
         </div>
 
-        <button id="cw-launcher" type="button" aria-label="Chat öffnen"></button>
+        <div id="cw-body"></div>
 
-        <div id="cw-window" class="cw-hidden">
-          <div id="cw-header" class="cw-header">
-            <div id="cw-title" class="cw-title">Support</div>
-            <button id="cw-close" type="button" aria-label="Chat schließen">×</button>
-          </div>
-
-          <div id="cw-body"></div>
-
-          <form id="cw-form">
-            <input id="cw-input" type="text" placeholder="Schreib eine Nachricht…" autocomplete="off" />
-            <button id="cw-send" type="submit">Senden</button>
-          </form>
-        </div>
+        <form id="cw-form">
+          <input id="cw-input" type="text" placeholder="Schreib eine Nachricht…" autocomplete="off" />
+          <button id="cw-send" type="submit">Senden</button>
+        </form>
       </div>
     `.trim();
-    document.body.appendChild(wrap);
+
+    document.body.appendChild(root);
   }
 
-  // --- 4) AB HIER: dein bisheriger script.js Code (leicht angepasst, damit er erst NACH dem Inject läuft)
+  // --- 4) AB HIER: dein bisheriger Code
 
   // ELEMENTE REFERENZIEREN -----------------------------------------
   const launcherWrap = document.getElementById("cw-launcher-wrap");

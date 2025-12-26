@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Chat Widget</title>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      /* wichtig: iframe soll transparent bleiben */
+      html, body { margin:0; padding:0; background:transparent; }
+    </style>
+  </head>
+  <body>
+    <!-- Minimal-HTML, das zu deinen IDs aus script.js passt -->
+    <div id="cw-launcher-wrap">
+      <div id="cw-greeting">
+        <span class="cw-greeting-text"></span>
+        <button class="cw-greeting-close" type="button" aria-label="close">×</button>
+      </div>
+
+      <button id="cw-launcher" type="button" aria-label="open chat"></button>
+
+      <div id="cw-window" class="cw-hidden">
+        <div id="cw-header" class="cw-header">
+          <div id="cw-title" class="cw-title">Support</div>
+          <button id="cw-close" type="button" aria-label="close">×</button>
+        </div>
+
+        <div id="cw-body"></div>
+
+        <form id="cw-form">
+          <input id="cw-input" type="text" placeholder="Schreib eine Nachricht..." />
+          <button id="cw-send" type="submit">Senden</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // Übergabe von parent -> iframe per Query Params
+      const sp = new URLSearchParams(location.search);
+      const wk = sp.get("widget_key") || "";
+      const api = sp.get("api_base") || "";
+
+      window.CHATBOT_WIDGET_KEY = wk;
+      window.CHATBOT_API_BASE = api;
+    </script>
+    <script src="./script.js" defer></script>
+  </body>
+</html>
