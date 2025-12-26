@@ -1,138 +1,74 @@
 (function () {
   "use strict";
 
-  // Mehrfach-Loads verhindern
-  if (window.__CW_WIDGET_LOADED__) return;
-  window.__CW_WIDGET_LOADED__ = true;
-
-  // --- Script URL (für base path wie https://.../chatbot-widget)
-  var currentScript =
-    document.currentScript ||
-    (function () {
-      var scripts = document.getElementsByTagName("script");
-      return scripts[scripts.length - 1];
-    })();
-
+  // --- 1) Script-Base (damit wir style.css von derselben GitHub-Pages URL laden können)
+  var currentScript = document.currentScript;
   var scriptSrc = currentScript && currentScript.src ? currentScript.src : "";
   var base = scriptSrc ? scriptSrc.split("/").slice(0, -1).join("/") : "";
 
-  // --- Host + Shadow Root
-  var HOST_ID = "cw-widget-host";
-  var host = document.getElementById(HOST_ID);
-
-  if (!host) {
-    host = document.createElement("div");
-    host.id = HOST_ID;
-    host.style.position = "fixed";
-    host.style.left = "0";
-    host.style.top = "0";
-    host.style.right = "0";
-    host.style.bottom = "0";
-    host.style.zIndex = "2147483647";
-    // Klicks nur im Widget erlauben
-    host.style.pointerEvents = "none";
-    document.body.appendChild(host);
+  // --- 2) CSS einhängen (nur einmal)
+  if (base && !document.querySelector('link[data-cw-style="1"]')) {
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = base + "/style.css";
+    link.setAttribute("data-cw-style", "1");
+    document.head.appendChild(link);
   }
 
-  var shadow = host.shadowRoot || host.attachShadow({ mode: "open" });
-
-  // --- Basis-Styles + CSS Platzhalter (einmal)
-  var cssTag = shadow.querySelector('style[data-cw-style="1"]');
-  if (!cssTag) {
-    var baseStyle = document.createElement("style");
-    baseStyle.setAttribute("data-cw-base-style", "1");
-    baseStyle.textContent = [
-      ":host {",
-      "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;",
-      "}",
-      "#cw-launcher-wrap, #cw-launcher-wrap * { box-sizing: border-box; }",
-      // Minimal-Fallback, falls style.css nicht lädt
-      "#cw-launcher { position: fixed; right: 24px; bottom: 24px; width: 56px; height: 56px; border-radius: 9999px; border: 0; cursor: pointer; background: #111; }",
-      "#cw-window { position: fixed; right: 24px; bottom: 92px; width: 320px; max-width: calc(100vw - 48px); background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 12px; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,.18); }",
-      ".cw-hidden { display: none !important; }",
-    ].join("\n");
-
-    cssTag = document.createElement("style");
-    cssTag.setAttribute("data-cw-style", "1");
-    cssTag.textContent = "";
-
-    shadow.appendChild(baseStyle);
-    shadow.appendChild(cssTag);
-  }
-
-  // --- HTML injizieren (einmal)
-  var root = shadow.getElementById("cw-launcher-wrap");
-  if (!root) {
-    root = document.createElement("div");
+  // --- 3) HTML einfügen (nur einmal)
+  // WICHTIG: IDs + Klassen, damit style.css auf jeden Fall matcht
+  if (!document.getElementById("cw-launcher-wrap")) {
+    var root = document.createElement("div");
     root.id = "cw-launcher-wrap";
-    // Im Shadow DOM wieder klickbar machen
-    root.style.pointerEvents = "auto";
+    root.className = "cw-launcher-wrap";
 
     root.innerHTML = [
-      '<div id="cw-greeting">',
+      '<div id="cw-greeting" class="cw-greeting">',
       '  <span class="cw-greeting-text"></span>',
       '  <button class="cw-greeting-close" type="button" aria-label="Greeting schließen">×</button>',
       "</div>",
-      '<button id="cw-launcher" type="button" aria-label="Chat öffnen"></button>',
-      '<div id="cw-window" class="cw-hidden">',
+
+      '<button id="cw-launcher" class="cw-launcher" type="button" aria-label="Chat öffnen"></button>',
+
+      '<div id="cw-window" class="cw-window cw-hidden">',
       '  <div id="cw-header" class="cw-header">',
       '    <div id="cw-title" class="cw-title">Support</div>',
-      '    <button id="cw-close" type="button" aria-label="Chat schließen">×</button>',
+      '    <button id="cw-close" class="cw-close" type="button" aria-label="Chat schließen">×</button>',
       "  </div>",
-      '  <div id="cw-body"></div>',
-      '  <form id="cw-form">',
-      '    <input id="cw-input" type="text" placeholder="Schreib eine Nachricht…" autocomplete="off" />',
-      '    <button id="cw-send" type="submit">Senden</button>',
+
+      '  <div id="cw-body" class="cw-body"></div>',
+
+      '  <form id="cw-form" class="cw-form">',
+      '    <input id="cw-input" class="cw-input" type="text" placeholder="Schreib eine Nachricht…" autocomplete="off" />',
+      '    <button id="cw-send" class="cw-send" type="submit">Senden</button>',
       "  </form>",
-      "</div>",
+      "</div>"
     ].join("\n");
 
-    shadow.appendChild(root);
+    document.body.appendChild(root);
   }
 
-  // --- style.css aus derselben Pages-URL in Shadow DOM laden
-  function loadCssIntoShadow() {
-    if (!base) return;
-    if (cssTag.textContent && cssTag.textContent.trim().length > 0) return;
-
-    fetch(base + "/style.css", { cache: "no-store" })
-      .then(function (res) {
-        if (!res.ok) throw new Error("CSS load failed: " + res.status);
-        return res.text();
-      })
-      .then(function (cssText) {
-        cssTag.textContent = cssText;
-      })
-      .catch(function () {
-        // Fallback-Styles bleiben aktiv
-      });
-  }
-  loadCssIntoShadow();
-
-  // ----------------------------------------------------------------
-  // Ab hier: Widget-Logik (alles im Shadow DOM)
-  // ----------------------------------------------------------------
-
-  var greetingEl = shadow.getElementById("cw-greeting");
+  // --- 4) ELEMENTE REFERENZIEREN -----------------------------------------
+  var greetingEl = document.getElementById("cw-greeting");
   var greetingCloseBtn = greetingEl ? greetingEl.querySelector(".cw-greeting-close") : null;
 
-  var launcherBtn = shadow.getElementById("cw-launcher");
-  var chatWindow = shadow.getElementById("cw-window");
-  var closeBtn = shadow.getElementById("cw-close");
+  var launcherBtn = document.getElementById("cw-launcher");
+  var chatWindow = document.getElementById("cw-window");
+  var closeBtn = document.getElementById("cw-close");
 
-  var bodyEl = shadow.getElementById("cw-body");
-  var formEl = shadow.getElementById("cw-form");
-  var inputEl = shadow.getElementById("cw-input");
-  var sendBtn = shadow.getElementById("cw-send");
+  var bodyEl = document.getElementById("cw-body");
+  var formEl = document.getElementById("cw-form");
+  var inputEl = document.getElementById("cw-input");
+  var sendBtn = document.getElementById("cw-send");
 
+  // --- 5) KONFIG ----------------------------------------------------------
   var API_BASE =
     window.CHATBOT_API_BASE ||
     (window.CHATBOT_CONFIG && window.CHATBOT_CONFIG.apiBase) ||
     "http://localhost:5051";
 
   var API_BASE_CLEAN = String(API_BASE || "").replace(/\/+$/, "");
-  var ASK_URL =
-    API_BASE_CLEAN.slice(-4) === "/ask" ? API_BASE_CLEAN : API_BASE_CLEAN + "/ask";
+  var ASK_URL = API_BASE_CLEAN.endsWith("/ask") ? API_BASE_CLEAN : API_BASE_CLEAN + "/ask";
   var CONFIG_URL = API_BASE_CLEAN + "/widget/config";
 
   var WIDGET_KEY =
@@ -149,8 +85,9 @@
       header_color: null,
       accent_color: null,
       text_color_mode: "auto",
-      avatar_url: null,
+      avatar_url: null
     },
+    configLoaded: false
   };
 
   function normalizeHexColor(c) {
@@ -158,16 +95,7 @@
     if (!s) return null;
     if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
     if (/^#[0-9a-fA-F]{3}$/.test(s)) {
-      return (
-        "#" +
-        s
-          .slice(1)
-          .split("")
-          .map(function (ch) {
-            return ch + ch;
-          })
-          .join("")
-      );
+      return "#" + s.slice(1).split("").map(function (ch) { return ch + ch; }).join("");
     }
     return null;
   }
@@ -179,15 +107,13 @@
     return {
       r: parseInt(v.slice(0, 2), 16),
       g: parseInt(v.slice(2, 4), 16),
-      b: parseInt(v.slice(4, 6), 16),
+      b: parseInt(v.slice(4, 6), 16)
     };
   }
 
   function luminance(rgb) {
     var srgb = [rgb.r, rgb.g, rgb.b]
-      .map(function (v) {
-        return v / 255;
-      })
+      .map(function (v) { return v / 255; })
       .map(function (v) {
         return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
       });
@@ -197,10 +123,8 @@
   function pickTextColorMode(headerHex, mode) {
     var m = String(mode || "auto").toLowerCase();
     if (m === "light" || m === "dark") return m;
-
     var rgb = hexToRgb(headerHex);
     if (!rgb) return "dark";
-
     return luminance(rgb) < 0.42 ? "light" : "dark";
   }
 
@@ -208,8 +132,8 @@
     var headerHex = normalizeHexColor(settings.header_color);
     var accentHex = normalizeHexColor(settings.accent_color);
 
-    var headerEl = shadow.getElementById("cw-header");
-    var titleEl = shadow.getElementById("cw-title");
+    var headerEl = document.getElementById("cw-header");
+    var titleEl = document.getElementById("cw-title");
 
     var resolvedTextMode = pickTextColorMode(headerHex, settings.text_color_mode);
     var headerTextColor = resolvedTextMode === "light" ? "#ffffff" : "#111827";
@@ -243,32 +167,20 @@
       header_color: pick(["header_color", "headerBg", "header_bg"]),
       accent_color: pick(["accent_color", "accent"]),
       text_color_mode: pick(["text_color_mode", "textColorMode"]),
-      avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
+      avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"])
     };
   }
 
   function mergeSettings(baseObj, incoming) {
     var out = {};
-    Object.keys(baseObj).forEach(function (k) {
-      out[k] = baseObj[k];
-    });
+    Object.keys(baseObj).forEach(function (k) { out[k] = baseObj[k]; });
 
     if (!incoming || typeof incoming !== "object") return out;
 
-    var keys = [
-      "bot_name",
-      "user_label",
-      "greeting_text",
-      "first_message",
-      "header_color",
-      "accent_color",
-      "text_color_mode",
-      "avatar_url",
-    ];
-
+    var keys = ["bot_name","user_label","greeting_text","first_message","header_color","accent_color","text_color_mode","avatar_url"];
     for (var i = 0; i < keys.length; i++) {
-      var k = keys[i];
-      if (typeof incoming[k] !== "undefined" && incoming[k] !== null) out[k] = incoming[k];
+      var k2 = keys[i];
+      if (typeof incoming[k2] !== "undefined" && incoming[k2] !== null) out[k2] = incoming[k2];
     }
     return out;
   }
@@ -307,15 +219,15 @@
   }
 
   function appendMessage(sender, text) {
-    if (!bodyEl) return;
     var row = createMessageRow(sender, text);
     bodyEl.appendChild(row);
     bodyEl.scrollTop = bodyEl.scrollHeight;
   }
 
   var typingEl = null;
+
   function showTypingIndicator() {
-    if (typingEl || !bodyEl) return;
+    if (typingEl) return;
 
     var row = document.createElement("div");
     row.className = "cw-typing-row";
@@ -367,22 +279,19 @@
     return fetch(ASK_URL, {
       method: "POST",
       headers: headers,
-      body: JSON.stringify({ message: userText, widget_key: WIDGET_KEY || undefined }),
+      body: JSON.stringify({ message: userText, widget_key: WIDGET_KEY || undefined })
     })
       .then(function (res) {
         if (!res.ok) {
           if (res.status === 401) return "Auth-Fehler – Widget-Key prüfen.";
           if (res.status === 429) return "Zu viele Anfragen / Rate-Limit.";
 
-          return res
-            .json()
-            .then(function (errData) {
-              if (errData && (errData.error || errData.message)) return errData.message || errData.error;
-              return "Serverfehler (" + res.status + ").";
-            })
-            .catch(function () {
-              return "Serverfehler (" + res.status + ").";
-            });
+          return res.json().then(function (errData) {
+            if (errData && (errData.error || errData.message)) return errData.message || errData.error;
+            return "Serverfehler (" + res.status + ").";
+          }).catch(function () {
+            return "Serverfehler (" + res.status + ").";
+          });
         }
 
         return res.json().then(function (data) {
@@ -401,32 +310,22 @@
 
     var headers = { "X-Widget-Key": WIDGET_KEY };
 
-    return fetch(CONFIG_URL + "?widget_key=" + encodeURIComponent(WIDGET_KEY), {
-      method: "GET",
-      headers: headers,
-    })
+    return fetch(CONFIG_URL + "?widget_key=" + encodeURIComponent(WIDGET_KEY), { method: "GET", headers: headers })
       .then(function (res) {
         if (!res.ok) return null;
-        return res
-          .json()
-          .then(function (data) {
-            if (!data || data.ok !== true) return null;
-            return data.widget_settings || data.settings || null;
-          })
-          .catch(function () {
-            return null;
-          });
+        return res.json().then(function (data) {
+          if (!data || data.ok !== true) return null;
+          return data.widget_settings || data.settings || null;
+        }).catch(function () { return null; });
       })
-      .catch(function () {
-        return null;
-      });
+      .catch(function () { return null; });
   }
 
   function applyWidgetSettings(settings) {
     var normalized = normalizeIncomingSettings(settings) || settings;
     widgetState.settings = mergeSettings(widgetState.settings, normalized);
 
-    var titleEl = shadow.getElementById("cw-title");
+    var titleEl = document.getElementById("cw-title");
     var botName = String(widgetState.settings.bot_name || "").trim();
     if (titleEl && botName) titleEl.textContent = botName;
 
@@ -437,10 +336,9 @@
     applyThemeColors(widgetState.settings);
   }
 
-  // UI Events
+  // --- UI Events
   if (launcherBtn) {
     launcherBtn.addEventListener("click", function () {
-      if (!chatWindow) return;
       var isHidden = chatWindow.classList.contains("cw-hidden");
       if (isHidden) {
         chatWindow.classList.remove("cw-hidden");
@@ -453,7 +351,7 @@
 
   if (closeBtn) {
     closeBtn.addEventListener("click", function () {
-      if (chatWindow) chatWindow.classList.add("cw-hidden");
+      chatWindow.classList.add("cw-hidden");
     });
   }
 
@@ -471,9 +369,8 @@
   if (formEl) {
     formEl.addEventListener("submit", function (e) {
       e.preventDefault();
-      if (!inputEl) return;
 
-      var userText = String(inputEl.value || "").trim();
+      var userText = inputEl.value.trim();
       if (!userText) return;
 
       if (!WIDGET_KEY) {
@@ -486,6 +383,7 @@
       inputEl.focus();
 
       showTypingIndicator();
+
       fetchBotReply(userText).then(function (replyText) {
         hideTypingIndicator();
         appendMessage("bot", replyText);
@@ -493,15 +391,19 @@
     });
   }
 
-  // Init
-  if (!WIDGET_KEY) {
-    appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
-    return;
-  }
+  // --- Init
+  (function initWidget() {
+    if (!WIDGET_KEY) {
+      appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
+      return;
+    }
 
-  fetchWidgetConfig().then(function (cfg) {
-    if (cfg) applyWidgetSettings(cfg);
-    var first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
-    appendMessage("bot", first);
-  });
+    fetchWidgetConfig().then(function (cfg) {
+      if (cfg) applyWidgetSettings(cfg);
+
+      widgetState.configLoaded = true;
+      var first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
+      appendMessage("bot", first);
+    });
+  })();
 })();
