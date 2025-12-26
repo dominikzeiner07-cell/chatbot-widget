@@ -14,7 +14,10 @@ const sendBtn = document.getElementById("cw-send");
 
 // KONFIG ----------------------------------------------------------
 // Wir nutzen widget_key (nicht mehr customer_id hardcoden)
-const API_BASE = "https://chatbot-backend-iqma.onrender.com";
+const API_BASE =
+  window.CHATBOT_API_BASE ||
+  (window.CHATBOT_CONFIG && window.CHATBOT_CONFIG.apiBase) ||
+  "http://localhost:5051";
 
 const API_BASE_CLEAN = API_BASE.replace(/\/+$/, "");
 

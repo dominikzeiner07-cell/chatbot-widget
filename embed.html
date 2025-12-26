@@ -1,49 +1,91 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Chat Widget</title>
-    <link rel="stylesheet" href="./style.css" />
-    <style>
-      /* wichtig: iframe soll transparent bleiben */
-      html, body { margin:0; padding:0; background:transparent; }
-    </style>
-  </head>
-  <body>
-    <!-- Minimal-HTML, das zu deinen IDs aus script.js passt -->
-    <div id="cw-launcher-wrap">
-      <div id="cw-greeting">
-        <span class="cw-greeting-text"></span>
-        <button class="cw-greeting-close" type="button" aria-label="close">×</button>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Widget Embed</title>
 
-      <button id="cw-launcher" type="button" aria-label="open chat"></button>
+  <link rel="stylesheet" href="./style.css" />
 
-      <div id="cw-window" class="cw-hidden">
-        <div id="cw-header" class="cw-header">
-          <div id="cw-title" class="cw-title">Support</div>
-          <button id="cw-close" type="button" aria-label="close">×</button>
-        </div>
+  <style>
+    /* Wichtig: iframe soll nicht als “weißer Kasten” wirken */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent !important;
+      overflow: hidden;
+    }
 
-        <div id="cw-body"></div>
+    /* Sicherheit: body-Styles aus style.css neutralisieren (nur fürs iframe) */
+    body {
+      min-height: 0 !important;
+      background: transparent !important;
+    }
+  </style>
+</head>
+<body>
 
-        <form id="cw-form">
-          <input id="cw-input" type="text" placeholder="Schreib eine Nachricht..." />
-          <button id="cw-send" type="submit">Senden</button>
-        </form>
-      </div>
+  <!-- Chat-Launcher -->
+  <div id="cw-launcher-wrap">
+    <div id="cw-greeting" class="cw-greeting">
+      <span class="cw-greeting-text">Ich bin hier, falls du Hilfe benötigst!</span>
+      <button class="cw-greeting-close" aria-label="Begrüßung schließen">×</button>
     </div>
 
-    <script>
-      // Übergabe von parent -> iframe per Query Params
-      const sp = new URLSearchParams(location.search);
-      const wk = sp.get("widget_key") || "";
-      const api = sp.get("api_base") || "";
+    <button id="cw-launcher" aria-label="Chat öffnen">
+      <span class="cw-launcher-icon">Chat</span>
+    </button>
+  </div>
 
-      window.CHATBOT_WIDGET_KEY = wk;
-      window.CHATBOT_API_BASE = api;
-    </script>
-    <script src="./script.js" defer></script>
-  </body>
+  <!-- Chat Window -->
+  <aside id="cw-window" class="cw-window cw-hidden" role="dialog" aria-label="Support-Chat">
+    <header class="cw-header">
+      <div class="cw-header-left">
+        <div class="cw-header-avatar">
+          <span>AI</span>
+        </div>
+
+        <div class="cw-header-texts">
+          <div class="cw-header-title">Ich helfe dir gerne!</div>
+          <div class="cw-header-subline">
+            <span class="cw-header-status">Online</span>
+            <span class="cw-header-separator">–</span>
+            <span class="cw-header-brand">powered by ChatBasis</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="cw-close" id="cw-close" aria-label="Fenster schließen">×</button>
+    </header>
+
+    <main class="cw-body" id="cw-body" aria-live="polite"></main>
+
+    <form class="cw-composer" id="cw-form">
+      <input
+        id="cw-input"
+        class="cw-input"
+        type="text"
+        maxlength="1000"
+        autocomplete="off"
+        placeholder="Schreib eine Nachricht…"
+        aria-label="Nachricht eingeben"
+      />
+      <button id="cw-send" class="cw-send" type="submit" aria-label="Senden">
+        <span class="cw-send-arrow">➤</span>
+      </button>
+    </form>
+  </aside>
+
+  <script>
+    // Übergabe von parent -> iframe per Query Params
+    var sp = new URLSearchParams(location.search);
+    var wk = sp.get("widget_key") || "";
+    var api = sp.get("api_base") || "";
+
+    window.CHATBOT_WIDGET_KEY = wk;
+    window.CHATBOT_API_BASE = api;
+  </script>
+
+  <script src="./script.js"></script>
+</body>
 </html>
