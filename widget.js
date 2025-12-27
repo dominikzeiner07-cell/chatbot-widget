@@ -36,11 +36,16 @@
   var IFRAME_ID = "cw-iframe";
   if (document.getElementById(IFRAME_ID)) return;
 
-  // 4) WICHTIG: Extra Raum für Shadows (sonst wird der Shadow am iframe-Rand „abgeschnitten“)
-  // 120px ist safe für deine box-shadows.
-  var PAD = 120;
+  // 4) Extra Raum für Shadows (sonst werden Shadows am iframe-Rand „abgeschnitten“)
+  // 80–120px ist für deine box-shadows realistisch. 96px ist ein guter Sweet Spot.
+  var PAD = 96;
 
-  // 5) iframe URL bauen (+ pad übergeben)
+  // Basis-Fläche, die du bisher schon ungefähr vorgesehen hattest
+  // (muss nicht 1:1 dem inneren Widget entsprechen – es ist nur die "Arbeitsfläche" des iframes)
+  var BASE_W = 480;
+  var BASE_H = 860;
+
+  // 5) iframe URL bauen (pad als Debug-Param ist ok, embed.html ignoriert ihn einfach)
   var src =
     base +
     "/embed.html" +
@@ -65,7 +70,7 @@
 
     iframe.style.position = "fixed";
 
-    // iframe-Kante nach außen schieben, damit Shadows nicht innerhalb der sichtbaren Seite „geclippt“ werden
+    // iframe-Kante nach außen schieben, damit Shadows nicht innerhalb des iframes „geclippt“ werden
     iframe.style.right = "-" + PAD + "px";
     iframe.style.bottom = "-" + PAD + "px";
 
@@ -73,11 +78,15 @@
     iframe.style.background = "transparent";
     iframe.style.zIndex = "2147483647";
 
-    // Größe + PAD (damit trotz Verschiebung genug Fläche im sichtbaren Bereich bleibt)
-    iframe.style.width = (480 + PAD) + "px";
-    iframe.style.height = (860 + PAD) + "px";
+    // Responsive Größe:
+    // - Desktop: BASE + PAD
+    // - Kleine Screens: nicht größer als Viewport + PAD
+    iframe.style.width =
+      "min(calc(" + BASE_W + "px + " + PAD + "px), calc(100vw + " + PAD + "px))";
+    iframe.style.height =
+      "min(calc(" + BASE_H + "px + " + PAD + "px), calc(100vh + " + PAD + "px))";
 
-    // responsive limit (kleine Screens)
+    // Safety: falls min()/calc() in einem alten Browser zickt, begrenzen wir trotzdem
     iframe.style.maxWidth = "calc(100vw + " + PAD + "px)";
     iframe.style.maxHeight = "calc(100vh + " + PAD + "px)";
 
