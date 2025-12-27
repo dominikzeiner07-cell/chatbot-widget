@@ -43,26 +43,38 @@
     "?widget_key=" + encodeURIComponent(WIDGET_KEY) +
     "&api_base=" + encodeURIComponent(API_BASE);
 
-  // 5) iframe erstellen (unten rechts, genug Platz für 400x640 + Abstände)
-  var iframe = document.createElement("iframe");
-  iframe.id = IFRAME_ID;
-  iframe.title = "Chat Widget";
-  iframe.src = src;
+  function mount() {
+    // falls body immer noch nicht da ist
+    if (!document.body) {
+      setTimeout(mount, 25);
+      return;
+    }
 
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.border = "0";
-  iframe.style.background = "transparent";
-  iframe.style.zIndex = "2147483647";
+    // 5) iframe erstellen
+    var iframe = document.createElement("iframe");
+    iframe.id = IFRAME_ID;
+    iframe.title = "Chat Widget";
+    iframe.src = src;
 
-  // responsive Größen: desktop bis 420x760, mobile passt sich an
-  iframe.style.width = "min(420px, calc(100vw - 16px))";
-  iframe.style.height = "min(760px, calc(100vh - 16px))";
+    // optional/harmlos – hilft bei manchen Browsern fürs “transparent”
+    iframe.setAttribute("allowtransparency", "true");
 
-  // falls min()/calc() nicht unterstützt wird, ist es trotzdem ok:
-  iframe.style.maxWidth = "100vw";
-  iframe.style.maxHeight = "100vh";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.border = "0";
+    iframe.style.background = "transparent";
+    iframe.style.zIndex = "2147483647";
 
-  document.body.appendChild(iframe);
+    // Mehr Platz geben, damit innen (right:24 + width:400 + shadow) sicher nicht clippt
+    iframe.style.width = "min(480px, calc(100vw - 16px))";
+    iframe.style.height = "min(860px, calc(100vh - 16px))";
+
+    iframe.style.maxWidth = "100vw";
+    iframe.style.maxHeight = "100vh";
+
+    document.body.appendChild(iframe);
+  }
+
+  mount();
 })();

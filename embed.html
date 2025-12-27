@@ -8,15 +8,17 @@
   <link rel="stylesheet" href="./style.css" />
 
   <style>
-    /* Wichtig: iframe soll nicht als “weißer Kasten” wirken */
+    /* iframe soll wirklich transparent bleiben */
     html, body {
+      width: 100%;
+      height: 100%;
       margin: 0;
       padding: 0;
       background: transparent !important;
       overflow: hidden;
     }
 
-    /* Sicherheit: body-Styles aus style.css neutralisieren (nur fürs iframe) */
+    /* style.css setzt body auf min-height:100vh + weiß; im iframe überschreiben */
     body {
       min-height: 0 !important;
       background: transparent !important;
@@ -29,11 +31,11 @@
   <div id="cw-launcher-wrap">
     <div id="cw-greeting" class="cw-greeting">
       <span class="cw-greeting-text">Ich bin hier, falls du Hilfe benötigst!</span>
-      <button class="cw-greeting-close" aria-label="Begrüßung schließen">×</button>
+      <button class="cw-greeting-close" type="button" aria-label="Begrüßung schließen">×</button>
     </div>
 
-    <button id="cw-launcher" aria-label="Chat öffnen">
-      <span class="cw-launcher-icon">Chat</span>
+    <button id="cw-launcher" type="button" aria-label="Chat öffnen">
+      <span class="cw-launcher-icon">💬</span>
     </button>
   </div>
 
@@ -55,7 +57,7 @@
         </div>
       </div>
 
-      <button class="cw-close" id="cw-close" aria-label="Fenster schließen">×</button>
+      <button class="cw-close" id="cw-close" type="button" aria-label="Fenster schließen">×</button>
     </header>
 
     <main class="cw-body" id="cw-body" aria-live="polite"></main>
@@ -77,15 +79,11 @@
   </aside>
 
   <script>
-    // Übergabe von parent -> iframe per Query Params
     var sp = new URLSearchParams(location.search);
-    var wk = sp.get("widget_key") || "";
-    var api = sp.get("api_base") || "";
-
-    window.CHATBOT_WIDGET_KEY = wk;
-    window.CHATBOT_API_BASE = api;
+    window.CHATBOT_WIDGET_KEY = sp.get("widget_key") || "";
+    window.CHATBOT_API_BASE = sp.get("api_base") || "";
   </script>
 
-  <script src="./script.js"></script>
+  <script src="./script.js" defer></script>
 </body>
 </html>
