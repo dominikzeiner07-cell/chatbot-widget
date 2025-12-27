@@ -36,12 +36,17 @@
   var IFRAME_ID = "cw-iframe";
   if (document.getElementById(IFRAME_ID)) return;
 
-  // 4) iframe URL bauen
+  // 4) WICHTIG: Extra Raum für Shadows (sonst wird der Shadow am iframe-Rand „abgeschnitten“)
+  // 120px ist safe für deine box-shadows.
+  var PAD = 120;
+
+  // 5) iframe URL bauen (+ pad übergeben)
   var src =
     base +
     "/embed.html" +
     "?widget_key=" + encodeURIComponent(WIDGET_KEY) +
-    "&api_base=" + encodeURIComponent(API_BASE);
+    "&api_base=" + encodeURIComponent(API_BASE) +
+    "&pad=" + encodeURIComponent(String(PAD));
 
   function mount() {
     // falls body immer noch nicht da ist
@@ -50,28 +55,31 @@
       return;
     }
 
-    // 5) iframe erstellen
     var iframe = document.createElement("iframe");
     iframe.id = IFRAME_ID;
     iframe.title = "Chat Widget";
     iframe.src = src;
 
-    // optional/harmlos – hilft bei manchen Browsern fürs “transparent”
+    // hilft in manchen Browsern
     iframe.setAttribute("allowtransparency", "true");
 
     iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
+
+    // iframe-Kante nach außen schieben, damit Shadows nicht innerhalb der sichtbaren Seite „geclippt“ werden
+    iframe.style.right = "-" + PAD + "px";
+    iframe.style.bottom = "-" + PAD + "px";
+
     iframe.style.border = "0";
     iframe.style.background = "transparent";
     iframe.style.zIndex = "2147483647";
 
-    // Mehr Platz geben, damit innen (right:24 + width:400 + shadow) sicher nicht clippt
-    iframe.style.width = "min(480px, calc(100vw - 16px))";
-    iframe.style.height = "min(860px, calc(100vh - 16px))";
+    // Größe + PAD (damit trotz Verschiebung genug Fläche im sichtbaren Bereich bleibt)
+    iframe.style.width = (480 + PAD) + "px";
+    iframe.style.height = (860 + PAD) + "px";
 
-    iframe.style.maxWidth = "100vw";
-    iframe.style.maxHeight = "100vh";
+    // responsive limit (kleine Screens)
+    iframe.style.maxWidth = "calc(100vw + " + PAD + "px)";
+    iframe.style.maxHeight = "calc(100vh + " + PAD + "px)";
 
     document.body.appendChild(iframe);
   }
