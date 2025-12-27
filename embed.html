@@ -24,22 +24,8 @@
       background: transparent !important;
     }
 
-    /* --- WICHTIG: Shadow-Clipping Fix ---
-       widget.js schiebt den iframe um "pad" nach rechts/unten aus dem Screen.
-       Hier schieben wir das Widget im iframe um pad nach links/oben zurück,
-       sodass es wieder bei 24px sitzt, aber Shadows nicht mehr am iframe-Rand abgeschnitten werden.
-    */
-    :root { --cw-iframe-pad: 0px; }
-
-    #cw-launcher-wrap {
-      right: calc(24px + var(--cw-iframe-pad)) !important;
-      bottom: calc(24px + var(--cw-iframe-pad)) !important;
-    }
-
-    .cw-window {
-      right: calc(24px + var(--cw-iframe-pad)) !important;
-      bottom: calc(110px + var(--cw-iframe-pad)) !important;
-    }
+    /* WICHTIG:
+       KEIN pad/offset hier – sonst verschiebt es das Widget weg von der Ecke. */
   </style>
 </head>
 <body>
@@ -99,12 +85,6 @@
     var sp = new URLSearchParams(location.search);
     window.CHATBOT_WIDGET_KEY = sp.get("widget_key") || "";
     window.CHATBOT_API_BASE = sp.get("api_base") || "";
-
-    // pad vom parent (widget.js)
-    var pad = parseInt(sp.get("pad") || "0", 10);
-    if (!isNaN(pad) && pad > 0) {
-      document.documentElement.style.setProperty("--cw-iframe-pad", pad + "px");
-    }
   </script>
 
   <script src="./script.js" defer></script>
