@@ -36,25 +36,22 @@
   var IFRAME_ID = "cw-iframe";
   if (document.getElementById(IFRAME_ID)) return;
 
-  // 4) Extra Raum für Shadows (sonst werden Shadows am iframe-Rand „abgeschnitten“)
-  // 80–120px ist für deine box-shadows realistisch. 96px ist ein guter Sweet Spot.
-  var PAD = 96;
-
-  // Basis-Fläche, die du bisher schon ungefähr vorgesehen hattest
-  // (muss nicht 1:1 dem inneren Widget entsprechen – es ist nur die "Arbeitsfläche" des iframes)
-  var BASE_W = 480;
+  // 4) Extra Raum für Shadows (links/oben relevant, weil dein Widget rechts/unten anchored ist)
+  var PAD = 180;     // ruhig großzügig, damit definitiv kein Clipping mehr passiert
+  var BASE_W = 480;  // Arbeitsfläche
   var BASE_H = 860;
 
-  // 5) iframe URL bauen (pad als Debug-Param ist ok, embed.html ignoriert ihn einfach)
+  // 5) iframe URL bauen (+ cache-buster, damit du die Änderung sicher siehst)
+  var CACHE_BUST = "v3";
   var src =
     base +
     "/embed.html" +
     "?widget_key=" + encodeURIComponent(WIDGET_KEY) +
     "&api_base=" + encodeURIComponent(API_BASE) +
-    "&pad=" + encodeURIComponent(String(PAD));
+    "&pad=" + encodeURIComponent(String(PAD)) +
+    "&cb=" + encodeURIComponent(CACHE_BUST);
 
   function mount() {
-    // falls body immer noch nicht da ist
     if (!document.body) {
       setTimeout(mount, 25);
       return;
@@ -65,30 +62,30 @@
     iframe.title = "Chat Widget";
     iframe.src = src;
 
-    // hilft in manchen Browsern
     iframe.setAttribute("allowtransparency", "true");
+    iframe.setAttribute("scrolling", "no");
 
     iframe.style.position = "fixed";
-
-    // iframe-Kante nach außen schieben, damit Shadows nicht innerhalb des iframes „geclippt“ werden
-    iframe.style.right = "-" + PAD + "px";
-    iframe.style.bottom = "-" + PAD + "px";
-
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
     iframe.style.border = "0";
     iframe.style.background = "transparent";
     iframe.style.zIndex = "2147483647";
+    iframe.style.display = "block";
 
-    // Responsive Größe:
-    // - Desktop: BASE + PAD
-    // - Kleine Screens: nicht größer als Viewport + PAD
+    // Fallback (falls min()/calc() aus irgendeinem Grund nicht greift)
+    iframe.style.width = (BASE_W + PAD) + "px";
+    iframe.style.height = (BASE_H + PAD) + "px";
+
+    // Responsive: iframe wird NIE größer als der Viewport, wächst aber nach links/oben,
+    // damit Shadows nicht am linken Rand abgeschnitten werden.
     iframe.style.width =
-      "min(calc(" + BASE_W + "px + " + PAD + "px), calc(100vw + " + PAD + "px))";
+      "min(calc(" + (BASE_W + PAD) + "px), 100vw)";
     iframe.style.height =
-      "min(calc(" + BASE_H + "px + " + PAD + "px), calc(100vh + " + PAD + "px))";
+      "min(calc(" + (BASE_H + PAD) + "px), 100vh)";
 
-    // Safety: falls min()/calc() in einem alten Browser zickt, begrenzen wir trotzdem
-    iframe.style.maxWidth = "calc(100vw + " + PAD + "px)";
-    iframe.style.maxHeight = "calc(100vh + " + PAD + "px)";
+    iframe.style.maxWidth = "100vw";
+    iframe.style.maxHeight = "100vh";
 
     document.body.appendChild(iframe);
   }
