@@ -12,6 +12,10 @@ const formEl = document.getElementById("cw-form");
 const inputEl = document.getElementById("cw-input");
 const sendBtn = document.getElementById("cw-send");
 
+// Header Avatar (neu)
+const headerAvatarImg = document.getElementById("cw-avatar-img");
+const headerAvatarFallback = document.getElementById("cw-avatar-fallback");
+
 // KONFIG ----------------------------------------------------------
 // Wir nutzen widget_key (nicht mehr customer_id hardcoden)
 const API_BASE =
@@ -145,9 +149,6 @@ function findGreetingTextEl() {
 
   if (candidate) return candidate;
 
-  // Fallback: wenn greetingEl selbst Text enthält (und ggf. ein Close-Button drin ist),
-  // dann legen wir ein separates Span an, damit wir den Close-Button nicht zerstören.
-  // Wir fügen das Span vor dem Close-Button ein (falls vorhanden), sonst ans Ende.
   const existingSpan = greetingEl.querySelector("[data-cw-greeting-text-generated]");
   if (existingSpan) return existingSpan;
 
@@ -192,10 +193,28 @@ function applyThemeColors({ header_color, accent_color, text_color_mode }) {
     if (sendBtn) sendBtn.style.backgroundColor = accentHex;
   }
 
-  // optional: CSS Vars (falls du im CSS später darauf umstellst)
+  // optional: CSS Vars
   if (headerHex) document.documentElement.style.setProperty("--cw-header-color", headerHex);
   if (accentHex) document.documentElement.style.setProperty("--cw-accent-color", accentHex);
   document.documentElement.style.setProperty("--cw-header-text-color", headerTextColor);
+}
+
+// Header-Avatar anwenden (neu)
+function applyHeaderAvatar(url) {
+  const u = String(url || "").trim();
+
+  if (headerAvatarImg && u) {
+    headerAvatarImg.src = u;
+    headerAvatarImg.style.display = "block";
+    if (headerAvatarFallback) headerAvatarFallback.style.display = "none";
+    return;
+  }
+
+  if (headerAvatarImg) {
+    headerAvatarImg.removeAttribute("src");
+    headerAvatarImg.style.display = "none";
+  }
+  if (headerAvatarFallback) headerAvatarFallback.style.display = "flex";
 }
 
 // Mappt alte/alternative Keys auf deine Canonical Keys
@@ -268,7 +287,8 @@ function createMessageRow({ sender, text }) {
       avatar.style.backgroundPosition = "center";
       avatar.style.backgroundRepeat = "no-repeat";
     } else {
-      avatar.textContent = "AI";
+      // kein "AI" mehr
+      avatar.textContent = "◉";
     }
   }
 
@@ -288,7 +308,7 @@ function appendMessage(sender, text) {
 }
 
 // ----------------------------------------------------------
-// TYPING INDICATOR ("AI tippt...") LOGIK
+// TYPING INDICATOR LOGIK
 // ----------------------------------------------------------
 let typingEl = null;
 
@@ -309,7 +329,8 @@ function showTypingIndicator() {
     avatar.style.backgroundPosition = "center";
     avatar.style.backgroundRepeat = "no-repeat";
   } else {
-    avatar.textContent = "AI";
+    // kein "AI" mehr
+    avatar.textContent = "◉";
   }
 
   const bubble = document.createElement("div");
@@ -383,9 +404,6 @@ async function fetchBotReply(userText) {
 
 // ----------------------------------------------------------
 // Widget Config laden + anwenden
-// Erwartet Backend: GET /widget/config (Header X-Widget-Key)
-// Response Beispiel:
-// { ok:true, widget_settings:{...}, customer_id:"...", widget_key:"..." }
 // ----------------------------------------------------------
 async function fetchWidgetConfig() {
   if (!WIDGET_KEY) return null;
@@ -403,7 +421,7 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    // widget_settings kann auch direkt data.widget_settings sein
+    // Backend liefert "settings" (oder manchmal widget_settings)
     const incoming = data.widget_settings || data.settings || null;
     return incoming;
   } catch (e) {
@@ -412,7 +430,7 @@ async function fetchWidgetConfig() {
 }
 
 function applyWidgetSettings(settings) {
-  // Erst normalisieren (damit launcherText etc. auch funktionieren)
+  // Erst normalisieren
   const normalized = normalizeIncomingSettings(settings) || settings;
 
   widgetState.settings = mergeSettings(widgetState.settings, normalized);
@@ -430,6 +448,9 @@ function applyWidgetSettings(settings) {
   if (greetTextEl && greetText) {
     greetTextEl.textContent = greetText;
   }
+
+  // Header Avatar (neu)
+  applyHeaderAvatar(widgetState.settings.avatar_url);
 
   // Farben
   applyThemeColors(widgetState.settings);
@@ -501,7 +522,6 @@ formEl?.addEventListener("submit", async (e) => {
 // INIT (Config -> Apply -> Initial Message)
 // ----------------------------------------------------------
 (async function initWidget() {
-  // Falls kein Key: trotzdem initiale Info ausgeben
   if (!WIDGET_KEY) {
     appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
     return;
@@ -510,11 +530,13 @@ formEl?.addEventListener("submit", async (e) => {
   const cfg = await fetchWidgetConfig();
   if (cfg) {
     applyWidgetSettings(cfg);
+  } else {
+    // falls config nicht lädt: Header-Avatar Fallback sichtbar lassen
+    applyHeaderAvatar(null);
   }
 
   widgetState.configLoaded = true;
 
-  // Initialer Bot-Gruß (aus Config, falls vorhanden)
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);
 })();
