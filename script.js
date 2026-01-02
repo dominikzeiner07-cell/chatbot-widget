@@ -12,12 +12,11 @@ const formEl = document.getElementById("cw-form");
 const inputEl = document.getElementById("cw-input");
 const sendBtn = document.getElementById("cw-send");
 
-// Header Avatar (neu)
+// Header Avatar
 const headerAvatarImg = document.getElementById("cw-avatar-img");
 const headerAvatarFallback = document.getElementById("cw-avatar-fallback");
 
 // KONFIG ----------------------------------------------------------
-// Wir nutzen widget_key (nicht mehr customer_id hardcoden)
 const API_BASE =
   window.CHATBOT_API_BASE ||
   (window.CHATBOT_CONFIG && window.CHATBOT_CONFIG.apiBase) ||
@@ -40,7 +39,7 @@ const widgetState = {
   settings: {
     bot_name: null,
     user_label: "DU",
-    greeting_text: null,        // Launcher-Bubble Text
+    greeting_text: null, // Launcher-Bubble Text
     first_message: "Hallo! Wie kann ich helfen?",
     header_color: null,
     accent_color: null,
@@ -49,6 +48,39 @@ const widgetState = {
   },
   configLoaded: false,
 };
+
+// ----------------------------------------------------------
+// READY-GATING (gegen Flash)
+// ----------------------------------------------------------
+const READY_FALLBACK_MS = 1200;
+let readyTimer = null;
+
+function setWidgetReady() {
+  if (launcherWrap) launcherWrap.classList.add("cw-ready");
+}
+
+function forceInitialHiddenState() {
+  // CSS blendet den Wrap schon aus (opacity:0). Hier nur "hart" absichern.
+  if (launcherWrap) launcherWrap.classList.remove("cw-ready");
+
+  // Greeting niemals vor Config anzeigen
+  if (greetingEl) greetingEl.style.display = "none";
+}
+
+forceInitialHiddenState();
+
+// ----------------------------------------------------------
+// Greeting Auto-Hide (erst starten, wenn Greeting wirklich gezeigt wird)
+// ----------------------------------------------------------
+let greetingAutoHideTimer = null;
+
+function scheduleGreetingAutoHide() {
+  if (!greetingEl) return;
+  if (greetingAutoHideTimer) clearTimeout(greetingAutoHideTimer);
+  greetingAutoHideTimer = setTimeout(() => {
+    if (greetingEl) greetingEl.style.display = "none";
+  }, 8000);
+}
 
 // HILFSFUNKTIONEN -------------------------------------------------
 function clamp01(n) {
@@ -60,7 +92,6 @@ function normalizeHexColor(c) {
   if (!s) return null;
   if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
   if (/^#[0-9a-fA-F]{3}$/.test(s)) {
-    // #abc -> #aabbcc
     return (
       "#" +
       s
@@ -98,12 +129,11 @@ function pickTextColorMode(headerHex, mode) {
   const rgb = hexToRgb(headerHex);
   if (!rgb) return "dark";
 
-  // Schwelle: je höher, desto eher "heller Text"
   const lum = luminance(rgb);
   return lum < 0.42 ? "light" : "dark";
 }
 
-// Header / Greeting Finder (robust, ohne HTML zu kennen)
+// Header / Greeting Finder
 function findHeaderEl() {
   return (
     document.getElementById("cw-header") ||
@@ -114,7 +144,6 @@ function findHeaderEl() {
 }
 
 function findHeaderTitleEl() {
-  // 1) direkte IDs / Klassen
   const direct =
     document.getElementById("cw-title") ||
     document.querySelector(".cw-title") ||
@@ -123,7 +152,6 @@ function findHeaderTitleEl() {
     null;
   if (direct) return direct;
 
-  // 2) innerhalb Header nach typischen Title-Elementen suchen
   const header = findHeaderEl();
   if (!header) return null;
 
@@ -140,7 +168,6 @@ function findHeaderTitleEl() {
 function findGreetingTextEl() {
   if (!greetingEl) return null;
 
-  // typische Varianten
   const candidate =
     greetingEl.querySelector(".cw-greeting-text") ||
     greetingEl.querySelector(".cw-greeting-content") ||
@@ -171,35 +198,27 @@ function applyThemeColors({ header_color, accent_color, text_color_mode }) {
   const headerEl = findHeaderEl();
   const resolvedTextMode = pickTextColorMode(headerHex, text_color_mode);
 
-  // Header Hintergrund
   if (headerEl && headerHex) {
     headerEl.style.backgroundColor = headerHex;
   }
 
-  // Text-Farbe im Header (und optional Buttons/Icon)
   const headerTitle = findHeaderTitleEl();
   const headerTextColor = resolvedTextMode === "light" ? "#ffffff" : "#111827";
 
-  if (headerTitle) {
-    headerTitle.style.color = headerTextColor;
-  }
-  if (closeBtn) {
-    closeBtn.style.color = headerTextColor;
-  }
+  if (headerTitle) headerTitle.style.color = headerTextColor;
+  if (closeBtn) closeBtn.style.color = headerTextColor;
 
-  // Accent: Launcher + Send Button
   if (accentHex) {
     if (launcherBtn) launcherBtn.style.backgroundColor = accentHex;
     if (sendBtn) sendBtn.style.backgroundColor = accentHex;
   }
 
-  // optional: CSS Vars
   if (headerHex) document.documentElement.style.setProperty("--cw-header-color", headerHex);
   if (accentHex) document.documentElement.style.setProperty("--cw-accent-color", accentHex);
   document.documentElement.style.setProperty("--cw-header-text-color", headerTextColor);
 }
 
-// Header-Avatar anwenden (neu)
+// Header-Avatar anwenden
 function applyHeaderAvatar(url) {
   const u = String(url || "").trim();
 
@@ -217,7 +236,7 @@ function applyHeaderAvatar(url) {
   if (headerAvatarFallback) headerAvatarFallback.style.display = "flex";
 }
 
-// Mappt alte/alternative Keys auf deine Canonical Keys
+// Mappt alte/alternative Keys
 function normalizeIncomingSettings(incoming) {
   if (!incoming || typeof incoming !== "object") return null;
   const obj = incoming;
@@ -245,7 +264,6 @@ function mergeSettings(base, incoming) {
   const out = { ...base };
   if (!incoming || typeof incoming !== "object") return out;
 
-  // erlaubte Felder (whitelist)
   const keys = [
     "bot_name",
     "user_label",
@@ -278,7 +296,6 @@ function createMessageRow({ sender, text }) {
     avatar.classList.add("cw-avatar-user");
     avatar.textContent = widgetState.settings.user_label || "DU";
   } else {
-    // Bot Avatar (Bild, wenn vorhanden)
     const url = String(widgetState.settings.avatar_url || "").trim();
     if (url) {
       avatar.textContent = "";
@@ -287,7 +304,6 @@ function createMessageRow({ sender, text }) {
       avatar.style.backgroundPosition = "center";
       avatar.style.backgroundRepeat = "no-repeat";
     } else {
-      // kein "AI" mehr
       avatar.textContent = "◉";
     }
   }
@@ -329,7 +345,6 @@ function showTypingIndicator() {
     avatar.style.backgroundPosition = "center";
     avatar.style.backgroundRepeat = "no-repeat";
   } else {
-    // kein "AI" mehr
     avatar.textContent = "◉";
   }
 
@@ -421,7 +436,6 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    // Backend liefert "settings" (oder manchmal widget_settings)
     const incoming = data.widget_settings || data.settings || null;
     return incoming;
   } catch (e) {
@@ -430,26 +444,29 @@ async function fetchWidgetConfig() {
 }
 
 function applyWidgetSettings(settings) {
-  // Erst normalisieren
   const normalized = normalizeIncomingSettings(settings) || settings;
-
   widgetState.settings = mergeSettings(widgetState.settings, normalized);
 
   // Header Titel
   const titleEl = findHeaderTitleEl();
   const botName = String(widgetState.settings.bot_name || "").trim();
-  if (titleEl && botName) {
-    titleEl.textContent = botName;
-  }
+  if (titleEl && botName) titleEl.textContent = botName;
 
-  // Greeting / Launcher Bubble Text
+  // Greeting Text + Sichtbarkeit
   const greetTextEl = findGreetingTextEl();
   const greetText = String(widgetState.settings.greeting_text || "").trim();
-  if (greetTextEl && greetText) {
-    greetTextEl.textContent = greetText;
+  if (greetTextEl) greetTextEl.textContent = greetText;
+
+  if (greetingEl) {
+    if (greetText) {
+      greetingEl.style.display = "flex";
+      scheduleGreetingAutoHide();
+    } else {
+      greetingEl.style.display = "none";
+    }
   }
 
-  // Header Avatar (neu)
+  // Header Avatar
   applyHeaderAvatar(widgetState.settings.avatar_url);
 
   // Farben
@@ -458,35 +475,23 @@ function applyWidgetSettings(settings) {
 
 // UI-AKTIONEN -----------------------------------------------------
 
-// Launcher öffnet / schließt das Fenster
 launcherBtn?.addEventListener("click", () => {
   const isHidden = chatWindow.classList.contains("cw-hidden");
   if (isHidden) {
     chatWindow.classList.remove("cw-hidden");
-    // Begrüßungsblase sofort ausblenden
     if (greetingEl) greetingEl.style.display = "none";
   } else {
     chatWindow.classList.add("cw-hidden");
   }
 });
 
-// X im Header schließt das Fenster
 closeBtn?.addEventListener("click", () => {
   chatWindow.classList.add("cw-hidden");
 });
 
-// Greeting close button
 greetingCloseBtn?.addEventListener("click", () => {
   if (greetingEl) greetingEl.style.display = "none";
 });
-
-// Greeting auto-hide nach 8 Sekunden
-setTimeout(() => {
-  if (!greetingEl) return;
-  if (greetingEl.style.display !== "none") {
-    greetingEl.style.display = "none";
-  }
-}, 8000);
 
 // Nachricht absenden ----------------------------------------------
 formEl?.addEventListener("submit", async (e) => {
@@ -519,24 +524,37 @@ formEl?.addEventListener("submit", async (e) => {
 });
 
 // ----------------------------------------------------------
-// INIT (Config -> Apply -> Initial Message)
+// INIT (Config -> Apply -> Ready -> Initial Message)
 // ----------------------------------------------------------
 (async function initWidget() {
+  // Falls kein Key: Widget trotzdem anzeigen (sonst "unsichtbar forever")
   if (!WIDGET_KEY) {
+    setWidgetReady();
     appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
     return;
   }
+
+  // Fallback: wenn Config langsam/kaputt ist, nach kurzer Zeit trotzdem anzeigen
+  readyTimer = setTimeout(() => {
+    setWidgetReady();
+  }, READY_FALLBACK_MS);
 
   const cfg = await fetchWidgetConfig();
   if (cfg) {
     applyWidgetSettings(cfg);
   } else {
-    // falls config nicht lädt: Header-Avatar Fallback sichtbar lassen
+    // Config nicht geladen: Greeting bleibt aus, Avatar-Fallback bleibt
     applyHeaderAvatar(null);
+    if (greetingEl) greetingEl.style.display = "none";
   }
 
   widgetState.configLoaded = true;
 
+  // Jetzt sichtbar machen (sofort, wenn Config da ist)
+  if (readyTimer) clearTimeout(readyTimer);
+  setWidgetReady();
+
+  // Initialer Bot-Gruß
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);
 })();
