@@ -430,3 +430,46 @@ body {
     opacity: 1;
   }
 }
+
+/* =============================================================== */
+/* MOBILE FIX (iPhone etc.)                                        */
+/* - Window passt in den Screen                                     */
+/* - verhindert iOS Safari Input-Zoom (font-size >= 16)            */
+/* - berücksichtigt Safe-Area (Home Indicator)                     */
+/* =============================================================== */
+@media (max-width: 480px), (max-height: 740px) {
+  #cw-launcher-wrap {
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  /* Fenster: links+rechts padding statt fixe Breite */
+  .cw-window {
+    left: 12px;
+    right: 12px;
+    width: auto;
+
+    /* näher an den Launcher + safe area */
+    bottom: calc(92px + env(safe-area-inset-bottom));
+
+    /* dynamische Viewport-Höhe (iOS) */
+    height: min(70vh, 560px);
+    max-height: calc(100dvh - 140px - env(safe-area-inset-bottom));
+
+    border-radius: 14px;
+  }
+
+  .cw-body {
+    padding: 14px;
+  }
+
+  /* wichtig gegen iOS Auto-Zoom */
+  .cw-input {
+    font-size: 16px;
+  }
+
+  /* optional etwas kompakter */
+  .cw-header {
+    padding: 10px 14px;
+  }
+}
