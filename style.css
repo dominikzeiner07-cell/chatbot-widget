@@ -7,6 +7,11 @@
   padding: 0;
 }
 
+:root {
+  --cw-kb: 0px; /* wird per JS gesetzt (Keyboard-Höhe) */
+  --cw-vh: 1vh; /* optional stabilisiert (per JS) */
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text",
     Roboto, Helvetica, Arial, sans-serif;
@@ -26,7 +31,7 @@ body {
   gap: 12px;
   z-index: 9999;
 
-  /* NEU: erst anzeigen, wenn Widget "ready" ist */
+  /* erst anzeigen, wenn Widget "ready" ist */
   opacity: 0;
   pointer-events: none;
   transform: translateY(6px);
@@ -50,13 +55,12 @@ body {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(0, 0, 0, 0.08);
 
-  /* NEU: default hidden (kein Flash-Text) */
+  /* default hidden (kein Flash-Text) */
   display: none;
 
   align-items: center;
   gap: 10px;
 
-  /* wichtig: lange Begrüßung in einer Zeile */
   white-space: nowrap;
   max-width: none;
 }
@@ -74,7 +78,7 @@ body {
   opacity: 1;
 }
 
-/* Launcher Button (runde schwarze Bubble) ----------------------- */
+/* Launcher Button ----------------------- */
 #cw-launcher {
   all: unset;
   cursor: pointer;
@@ -99,11 +103,11 @@ body {
   line-height: 1;
 }
 
-/* CHAT WINDOW ----------------------------------------------------------- */
+/* CHAT WINDOW --------------------------------------------------- */
 .cw-window {
   position: fixed;
   right: 24px;
-  bottom: 110px; /* Fenster sitzt über der Bubble */
+  bottom: 110px;
 
   width: 400px;
   max-width: calc(100vw - 32px);
@@ -126,7 +130,6 @@ body {
   font-size: 14px;
 }
 
-/* Hidden state */
 .cw-hidden {
   display: none;
 }
@@ -164,7 +167,6 @@ body {
   overflow: hidden;
 }
 
-/* Falls im Header ein <img> drin ist (dein cw-avatar-img) */
 .cw-header-avatar img {
   width: 100%;
   height: 100%;
@@ -185,7 +187,6 @@ body {
   color: #fff;
 }
 
-/* Status + Brand in einer Zeile, gleiche Farbe/Style */
 .cw-header-subline {
   display: flex;
   align-items: center;
@@ -237,7 +238,6 @@ body {
   width: 100%;
 }
 
-/* Avatar-Kreis neben jeder Nachricht */
 .cw-avatar {
   flex-shrink: 0;
   width: 32px;
@@ -252,13 +252,13 @@ body {
   justify-content: center;
   border: 2px solid #000;
 }
+
 .cw-avatar-user {
   background-color: #dcdcdc;
   color: #000;
   border-color: #dcdcdc;
 }
 
-/* Die Chat-Bubble selbst */
 .cw-msg {
   border: 1px solid #000;
   border-radius: 8px;
@@ -272,14 +272,12 @@ body {
   white-space: pre-line;
 }
 
-/* Zeile für User-Nachricht */
 .cw-row-user {
   width: 100%;
   display: flex;
   justify-content: flex-end;
 }
 
-/* Avatar rechts von der Bubble */
 .cw-row-user .cw-avatar {
   order: 2;
   margin-left: 8px;
@@ -344,7 +342,7 @@ body {
   font-weight: 600;
 }
 
-/* SCROLLBAR minimal (optional) --------------------------------- */
+/* SCROLLBAR minimal -------------------------------------------- */
 .cw-body::-webkit-scrollbar {
   width: 4px;
 }
@@ -356,10 +354,7 @@ body {
   border-radius: 999px;
 }
 
-/* --------------------------------------------------------------- */
-/* TYPING INDICATOR                                                */
-/* --------------------------------------------------------------- */
-
+/* TYPING INDICATOR --------------------------------------------- */
 .cw-typing-row {
   display: flex;
   align-items: flex-start;
@@ -368,7 +363,6 @@ body {
   width: 100%;
 }
 
-/* Typing Avatar auf gleiche Größe wie normale Avatare */
 .cw-typing-row .cw-avatar {
   flex-shrink: 0;
   width: 32px;
@@ -432,10 +426,7 @@ body {
 }
 
 /* =============================================================== */
-/* MOBILE FIX (iPhone etc.)                                        */
-/* - Window passt in den Screen                                     */
-/* - verhindert iOS Safari Input-Zoom (font-size >= 16)            */
-/* - berücksichtigt Safe-Area (Home Indicator)                     */
+/* MOBILE (fast fullscreen + keyboard-safe + weniger "gestaucht")  */
 /* =============================================================== */
 @media (max-width: 480px), (max-height: 740px) {
   #cw-launcher-wrap {
@@ -443,18 +434,19 @@ body {
     bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
-  /* Fenster: links+rechts padding statt fixe Breite */
+  /* fast fullscreen: statt fixer Höhe -> top/bottom */
   .cw-window {
     left: 12px;
     right: 12px;
     width: auto;
 
-    /* näher an den Launcher + safe area */
-    bottom: calc(92px + env(safe-area-inset-bottom));
+    top: 12px;
 
-    /* dynamische Viewport-Höhe (iOS) */
-    height: min(70vh, 560px);
-    max-height: calc(100dvh - 140px - env(safe-area-inset-bottom));
+    /* unten: Launcher-Abstand + Safe-Area + Keyboard-Push (JS: --cw-kb) */
+    bottom: calc(92px + env(safe-area-inset-bottom) + var(--cw-kb));
+
+    height: auto;
+    max-height: none;
 
     border-radius: 14px;
   }
@@ -463,12 +455,11 @@ body {
     padding: 14px;
   }
 
-  /* wichtig gegen iOS Auto-Zoom */
+  /* verhindert iOS Auto-Zoom */
   .cw-input {
     font-size: 16px;
   }
 
-  /* optional etwas kompakter */
   .cw-header {
     padding: 10px 14px;
   }

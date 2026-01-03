@@ -23,7 +23,6 @@ const API_BASE =
   "http://localhost:5051";
 
 const API_BASE_CLEAN = API_BASE.replace(/\/+$/, "");
-
 const ASK_URL = API_BASE_CLEAN.endsWith("/ask") ? API_BASE_CLEAN : `${API_BASE_CLEAN}/ask`;
 const CONFIG_URL = `${API_BASE_CLEAN}/widget/config`;
 
@@ -50,6 +49,56 @@ const widgetState = {
 };
 
 // ----------------------------------------------------------
+// MOBILE / VIEWPORT FIX (gegen "gestaucht" + Keyboard-Jank)
+// - setzt CSS Vars: --cw-kb (Keyboard-Push) und optional --cw-vh
+// - reagiert auf visualViewport resize/scroll (iOS/Android)
+// ----------------------------------------------------------
+const root = document.documentElement;
+function setCssVar(name, value) {
+  try {
+    root.style.setProperty(name, value);
+  } catch (_) {}
+}
+
+function isChatOpen() {
+  return chatWindow && !chatWindow.classList.contains("cw-hidden");
+}
+
+function updateViewportVars() {
+  const vv = window.visualViewport;
+
+  // keyboard height approx (in px)
+  let kb = 0;
+  if (vv) {
+    // works well in iOS Safari + many Android browsers
+    kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  }
+
+  // only apply kb push when chat is open (sonst launcher verschiebt sich unnötig)
+  setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
+
+  // optional: stable vh unit
+  const h = vv ? vv.height : window.innerHeight;
+  setCssVar("--cw-vh", `${h * 0.01}px`);
+}
+
+// hook events
+(function initViewportFix() {
+  updateViewportVars();
+
+  const vv = window.visualViewport;
+  if (vv) {
+    vv.addEventListener("resize", updateViewportVars, { passive: true });
+    vv.addEventListener("scroll", updateViewportVars, { passive: true });
+  }
+
+  window.addEventListener("resize", updateViewportVars, { passive: true });
+  window.addEventListener("orientationchange", () => {
+    setTimeout(updateViewportVars, 80);
+  });
+})();
+
+// ----------------------------------------------------------
 // READY-GATING (gegen Flash)
 // ----------------------------------------------------------
 const READY_FALLBACK_MS = 1200;
@@ -60,10 +109,7 @@ function setWidgetReady() {
 }
 
 function forceInitialHiddenState() {
-  // CSS blendet den Wrap schon aus (opacity:0). Hier nur "hart" absichern.
   if (launcherWrap) launcherWrap.classList.remove("cw-ready");
-
-  // Greeting niemals vor Config anzeigen
   if (greetingEl) greetingEl.style.display = "none";
 }
 
@@ -473,20 +519,46 @@ function applyWidgetSettings(settings) {
   applyThemeColors(widgetState.settings);
 }
 
-// UI-AKTIONEN -----------------------------------------------------
+// ----------------------------------------------------------
+// Mobile Input "Quality": weniger Autofill-Mist (hilft nicht immer,
+// aber ist sauber + macht Enter=Send)
+// ----------------------------------------------------------
+(function hardenInput() {
+  if (!inputEl) return;
+  inputEl.setAttribute("autocomplete", "off");
+  inputEl.setAttribute("autocorrect", "off");
+  inputEl.setAttribute("autocapitalize", "none");
+  inputEl.setAttribute("spellcheck", "false");
+  inputEl.setAttribute("inputmode", "text");
+  inputEl.setAttribute("enterkeyhint", "send");
+})();
 
+// ----------------------------------------------------------
+// OPEN/CLOSE helpers (für viewport recalcs)
+// ----------------------------------------------------------
+function onChatOpenChanged() {
+  updateViewportVars();
+  // Doppelt RAF hilft gegen "gestaucht bis scroll" in manchen Browsern
+  requestAnimationFrame(() => updateViewportVars());
+  requestAnimationFrame(() => updateViewportVars());
+}
+
+// UI-AKTIONEN -----------------------------------------------------
 launcherBtn?.addEventListener("click", () => {
   const isHidden = chatWindow.classList.contains("cw-hidden");
   if (isHidden) {
     chatWindow.classList.remove("cw-hidden");
     if (greetingEl) greetingEl.style.display = "none";
+    onChatOpenChanged();
   } else {
     chatWindow.classList.add("cw-hidden");
+    onChatOpenChanged();
   }
 });
 
 closeBtn?.addEventListener("click", () => {
   chatWindow.classList.add("cw-hidden");
+  onChatOpenChanged();
 });
 
 greetingCloseBtn?.addEventListener("click", () => {
@@ -507,10 +579,19 @@ formEl?.addEventListener("submit", async (e) => {
 
   appendMessage("user", userText);
 
+  // Input leeren
   inputEl.value = "";
-  inputEl.focus();
+
+  // MOBILE: Keyboard schließen beim Senden (das ist dein gewünschtes Upgrade)
+  const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  if (isCoarse) {
+    inputEl.blur(); // <- wichtigste Zeile gegen Bar/Shift
+  } else {
+    inputEl.focus();
+  }
 
   showTypingIndicator();
+  updateViewportVars();
 
   let replyText;
   try {
@@ -521,20 +602,24 @@ formEl?.addEventListener("submit", async (e) => {
 
   hideTypingIndicator();
   appendMessage("bot", replyText);
+
+  // sicherheitshalber am Ende nochmal scroll + viewport update
+  setTimeout(() => {
+    if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
+    updateViewportVars();
+  }, 0);
 });
 
 // ----------------------------------------------------------
 // INIT (Config -> Apply -> Ready -> Initial Message)
 // ----------------------------------------------------------
 (async function initWidget() {
-  // Falls kein Key: Widget trotzdem anzeigen (sonst "unsichtbar forever")
   if (!WIDGET_KEY) {
     setWidgetReady();
     appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
     return;
   }
 
-  // Fallback: wenn Config langsam/kaputt ist, nach kurzer Zeit trotzdem anzeigen
   readyTimer = setTimeout(() => {
     setWidgetReady();
   }, READY_FALLBACK_MS);
@@ -543,18 +628,17 @@ formEl?.addEventListener("submit", async (e) => {
   if (cfg) {
     applyWidgetSettings(cfg);
   } else {
-    // Config nicht geladen: Greeting bleibt aus, Avatar-Fallback bleibt
     applyHeaderAvatar(null);
     if (greetingEl) greetingEl.style.display = "none";
   }
 
   widgetState.configLoaded = true;
 
-  // Jetzt sichtbar machen (sofort, wenn Config da ist)
   if (readyTimer) clearTimeout(readyTimer);
   setWidgetReady();
 
-  // Initialer Bot-Gruß
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);
+
+  updateViewportVars();
 })();
