@@ -443,16 +443,18 @@ body {
     bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
-  /* FAST FULLSCREEN */
+  /* Fenster: links+rechts padding statt fixe Breite */
   .cw-window {
     left: 12px;
     right: 12px;
-    top: calc(12px + env(safe-area-inset-top));
-    bottom: calc(12px + env(safe-area-inset-bottom));
-
     width: auto;
-    height: auto;
-    max-height: none;
+
+    /* näher an den Launcher + safe area */
+    bottom: calc(92px + env(safe-area-inset-bottom));
+
+    /* dynamische Viewport-Höhe (iOS) */
+    height: min(70vh, 560px);
+    max-height: calc(100dvh - 140px - env(safe-area-inset-bottom));
 
     border-radius: 14px;
   }
@@ -466,6 +468,7 @@ body {
     font-size: 16px;
   }
 
+  /* optional etwas kompakter */
   .cw-header {
     padding: 10px 14px;
   }
