@@ -228,6 +228,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  /* Mobile Browser (Chrome/Google App) smooth */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .cw-row {
@@ -302,6 +306,9 @@ body {
   padding: 8px;
   gap: 8px;
   background-color: #fff;
+
+  /* verhindert, dass “Body-scroll” Einfluss hat */
+  flex-shrink: 0;
 }
 
 .cw-input {
@@ -426,7 +433,10 @@ body {
 }
 
 /* =============================================================== */
-/* MOBILE (fast fullscreen + keyboard-safe + weniger "gestaucht")  */
+/* MOBILE (stabil: kein “zu hoch”, kein “gestaucht”)               */
+/* - nutzt top+bottom statt vh                                     */
+/* - berücksichtigt Safe-Area + Keyboard-Push (var --cw-kb)        */
+/* - besser für Safari / Chrome / Google App / Android             */
 /* =============================================================== */
 @media (max-width: 480px), (max-height: 740px) {
   #cw-launcher-wrap {
@@ -434,21 +444,25 @@ body {
     bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
-  /* fast fullscreen: statt fixer Höhe -> top/bottom */
   .cw-window {
     left: 12px;
     right: 12px;
     width: auto;
 
-    top: 12px;
+    /* oben: safe-area berücksichtigen */
+    top: calc(12px + env(safe-area-inset-top));
 
-    /* unten: Launcher-Abstand + Safe-Area + Keyboard-Push (JS: --cw-kb) */
+    /* unten: Platz für Launcher + Safe-Area + Keyboard */
     bottom: calc(92px + env(safe-area-inset-bottom) + var(--cw-kb));
 
+    /* statt height -> auto, damit nix abgeschnitten wird */
     height: auto;
     max-height: none;
 
     border-radius: 14px;
+
+    /* hilft gegen Rendering/Jank in manchen Browsern */
+    transform: translateZ(0);
   }
 
   .cw-body {
