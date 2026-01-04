@@ -54,7 +54,6 @@ const widgetState = {
 // - reagiert auf visualViewport resize/scroll (iOS/Android)
 // ----------------------------------------------------------
 const root = document.documentElement;
-
 function setCssVar(name, value) {
   try {
     root.style.setProperty(name, value);
@@ -68,17 +67,22 @@ function isChatOpen() {
 function updateViewportVars() {
   const vv = window.visualViewport;
 
+  // keyboard height approx (in px)
   let kb = 0;
   if (vv) {
+    // works well in iOS Safari + many Android browsers
     kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   }
 
+  // only apply kb push when chat is open (sonst launcher verschiebt sich unnötig)
   setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
 
+  // optional: stable vh unit
   const h = vv ? vv.height : window.innerHeight;
   setCssVar("--cw-vh", `${h * 0.01}px`);
 }
 
+// hook events
 (function initViewportFix() {
   updateViewportVars();
 
@@ -93,33 +97,6 @@ function updateViewportVars() {
     setTimeout(updateViewportVars, 80);
   });
 })();
-
-// ----------------------------------------------------------
-// OPEN STATE: class toggling + parent messaging (fullscreen iframe)
-// ----------------------------------------------------------
-function postToParent(type) {
-  try {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage(
-        { type, widgetKey: WIDGET_KEY || "" },
-        "*"
-      );
-    }
-  } catch (_) {}
-}
-
-function setOpenState(open) {
-  try {
-    document.documentElement.classList.toggle("cw-open", !!open);
-  } catch (_) {}
-
-  // parent iframe resize + scroll lock
-  postToParent(open ? "cw:open" : "cw:close");
-
-  updateViewportVars();
-  requestAnimationFrame(updateViewportVars);
-  requestAnimationFrame(updateViewportVars);
-}
 
 // ----------------------------------------------------------
 // READY-GATING (gegen Flash)
@@ -139,7 +116,7 @@ function forceInitialHiddenState() {
 forceInitialHiddenState();
 
 // ----------------------------------------------------------
-// Greeting Auto-Hide
+// Greeting Auto-Hide (erst starten, wenn Greeting wirklich gezeigt wird)
 // ----------------------------------------------------------
 let greetingAutoHideTimer = null;
 
@@ -152,6 +129,10 @@ function scheduleGreetingAutoHide() {
 }
 
 // HILFSFUNKTIONEN -------------------------------------------------
+function clamp01(n) {
+  return Math.max(0, Math.min(1, n));
+}
+
 function normalizeHexColor(c) {
   const s = String(c || "").trim();
   if (!s) return null;
@@ -539,7 +520,8 @@ function applyWidgetSettings(settings) {
 }
 
 // ----------------------------------------------------------
-// Mobile Input: weniger Autofill-Zeug (hilft nicht immer, aber sauber)
+// Mobile Input "Quality": weniger Autofill-Mist (hilft nicht immer,
+// aber ist sauber + macht Enter=Send)
 // ----------------------------------------------------------
 (function hardenInput() {
   if (!inputEl) return;
@@ -549,9 +531,17 @@ function applyWidgetSettings(settings) {
   inputEl.setAttribute("spellcheck", "false");
   inputEl.setAttribute("inputmode", "text");
   inputEl.setAttribute("enterkeyhint", "send");
-  inputEl.setAttribute("name", "cw-message");
-  if (formEl) formEl.setAttribute("autocomplete", "off");
 })();
+
+// ----------------------------------------------------------
+// OPEN/CLOSE helpers (für viewport recalcs)
+// ----------------------------------------------------------
+function onChatOpenChanged() {
+  updateViewportVars();
+  // Doppelt RAF hilft gegen "gestaucht bis scroll" in manchen Browsern
+  requestAnimationFrame(() => updateViewportVars());
+  requestAnimationFrame(() => updateViewportVars());
+}
 
 // UI-AKTIONEN -----------------------------------------------------
 launcherBtn?.addEventListener("click", () => {
@@ -559,16 +549,16 @@ launcherBtn?.addEventListener("click", () => {
   if (isHidden) {
     chatWindow.classList.remove("cw-hidden");
     if (greetingEl) greetingEl.style.display = "none";
-    setOpenState(true);
+    onChatOpenChanged();
   } else {
     chatWindow.classList.add("cw-hidden");
-    setOpenState(false);
+    onChatOpenChanged();
   }
 });
 
 closeBtn?.addEventListener("click", () => {
   chatWindow.classList.add("cw-hidden");
-  setOpenState(false);
+  onChatOpenChanged();
 });
 
 greetingCloseBtn?.addEventListener("click", () => {
@@ -592,10 +582,10 @@ formEl?.addEventListener("submit", async (e) => {
   // Input leeren
   inputEl.value = "";
 
-  // MOBILE: Keyboard schließen beim Senden
+  // MOBILE: Keyboard schließen beim Senden (das ist dein gewünschtes Upgrade)
   const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   if (isCoarse) {
-    inputEl.blur();
+    inputEl.blur(); // <- wichtigste Zeile gegen Bar/Shift
   } else {
     inputEl.focus();
   }
@@ -613,6 +603,7 @@ formEl?.addEventListener("submit", async (e) => {
   hideTypingIndicator();
   appendMessage("bot", replyText);
 
+  // sicherheitshalber am Ende nochmal scroll + viewport update
   setTimeout(() => {
     if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
     updateViewportVars();
@@ -631,7 +622,7 @@ formEl?.addEventListener("submit", async (e) => {
 
   readyTimer = setTimeout(() => {
     setWidgetReady();
-  }, 1200);
+  }, READY_FALLBACK_MS);
 
   const cfg = await fetchWidgetConfig();
   if (cfg) {

@@ -143,7 +143,6 @@ body {
   align-items: center;
   justify-content: flex-start;
   gap: 12px;
-  flex-shrink: 0;
 }
 
 .cw-header-left {
@@ -230,6 +229,7 @@ body {
   flex-direction: column;
   gap: 16px;
 
+  /* Mobile Browser (Chrome/Google App) smooth */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
@@ -306,6 +306,8 @@ body {
   padding: 8px;
   gap: 8px;
   background-color: #fff;
+
+  /* verhindert, dass “Body-scroll” Einfluss hat */
   flex-shrink: 0;
 }
 
@@ -431,7 +433,10 @@ body {
 }
 
 /* =============================================================== */
-/* MOBILE: CLOSED (Launcher normal)                                */
+/* MOBILE (stabil: kein “zu hoch”, kein “gestaucht”)               */
+/* - nutzt top+bottom statt vh                                     */
+/* - berücksichtigt Safe-Area + Keyboard-Push (var --cw-kb)        */
+/* - besser für Safari / Chrome / Google App / Android             */
 /* =============================================================== */
 @media (max-width: 480px), (max-height: 740px) {
   #cw-launcher-wrap {
@@ -439,20 +444,24 @@ body {
     bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
-  /* CLOSED (nicht fullscreen): leichtes "fast fullscreen" bleibt möglich,
-     aber OPEN machen wir echtes Fullscreen via .cw-open weiter unten */
   .cw-window {
     left: 12px;
     right: 12px;
     width: auto;
 
+    /* oben: safe-area berücksichtigen */
     top: calc(12px + env(safe-area-inset-top));
+
+    /* unten: Platz für Launcher + Safe-Area + Keyboard */
     bottom: calc(92px + env(safe-area-inset-bottom) + var(--cw-kb));
 
+    /* statt height -> auto, damit nix abgeschnitten wird */
     height: auto;
     max-height: none;
 
     border-radius: 14px;
+
+    /* hilft gegen Rendering/Jank in manchen Browsern */
     transform: translateZ(0);
   }
 
@@ -467,41 +476,5 @@ body {
 
   .cw-header {
     padding: 10px 14px;
-  }
-}
-
-/* =============================================================== */
-/* MOBILE: OPEN = ECHTES FULLSCREEN OVERLAY                         */
-/* - Launcher verschwindet                                           */
-/* - Fenster füllt den Screen (wie Kickz)                            */
-/* =============================================================== */
-@media (max-width: 480px), (max-height: 740px) {
-  .cw-open #cw-launcher-wrap {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transform: translateY(6px);
-  }
-
-  .cw-open .cw-window {
-    left: 0 !important;
-    right: 0 !important;
-
-    top: env(safe-area-inset-top) !important;
-    bottom: calc(var(--cw-kb) + env(safe-area-inset-bottom)) !important;
-
-    width: auto !important;
-    height: auto !important;
-
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    border-left: 0 !important;
-    border-right: 0 !important;
-
-    transform: translateZ(0);
-  }
-
-  /* Composer bekommt Safe-Area, damit Home-Indicator nicht drüber liegt */
-  .cw-open .cw-composer {
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
   }
 }
