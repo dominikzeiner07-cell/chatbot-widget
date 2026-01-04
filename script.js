@@ -12,6 +12,8 @@ const formEl = document.getElementById("cw-form");
 const inputEl = document.getElementById("cw-input");
 const sendBtn = document.getElementById("cw-send");
 
+const backdropEl = document.getElementById("cw-backdrop");
+
 // Header Avatar
 const headerAvatarImg = document.getElementById("cw-avatar-img");
 const headerAvatarFallback = document.getElementById("cw-avatar-fallback");
@@ -38,65 +40,85 @@ const widgetState = {
   settings: {
     bot_name: null,
     user_label: "DU",
-    greeting_text: null, // Launcher-Bubble Text
+    greeting_text: null,
     first_message: "Hallo! Wie kann ich helfen?",
     header_color: null,
     accent_color: null,
-    text_color_mode: "auto", // auto | light | dark
+    text_color_mode: "auto",
     avatar_url: null,
   },
   configLoaded: false,
 };
 
 // ----------------------------------------------------------
-// MOBILE / VIEWPORT FIX (gegen "gestaucht" + Keyboard-Jank)
-// - setzt CSS Vars: --cw-kb (Keyboard-Push) und optional --cw-vh
-// - reagiert auf visualViewport resize/scroll (iOS/Android)
+// MOBILE / KEYBOARD VAR (nur --cw-kb, minimal, ohne Fullscreen-Layout)
 // ----------------------------------------------------------
 const root = document.documentElement;
+
 function setCssVar(name, value) {
-  try {
-    root.style.setProperty(name, value);
-  } catch (_) {}
+  try { root.style.setProperty(name, value); } catch (_) {}
 }
 
 function isChatOpen() {
   return chatWindow && !chatWindow.classList.contains("cw-hidden");
 }
 
-function updateViewportVars() {
-  const vv = window.visualViewport;
+// Mobile detection für Modal-Lock (Handy/Tablet Touch)
+function isMobileModalTarget() {
+  const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  const small = window.matchMedia && (window.matchMedia("(max-width: 820px)").matches || window.matchMedia("(max-height: 900px)").matches);
+  return !!(coarse && small);
+}
 
-  // keyboard height approx (in px)
+function updateKeyboardVar() {
+  const vv = window.visualViewport;
   let kb = 0;
+
   if (vv) {
-    // works well in iOS Safari + many Android browsers
     kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   }
 
-  // only apply kb push when chat is open (sonst launcher verschiebt sich unnötig)
   setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
-
-  // optional: stable vh unit
-  const h = vv ? vv.height : window.innerHeight;
-  setCssVar("--cw-vh", `${h * 0.01}px`);
 }
 
-// hook events
-(function initViewportFix() {
-  updateViewportVars();
+(function initKeyboardVar() {
+  updateKeyboardVar();
 
   const vv = window.visualViewport;
   if (vv) {
-    vv.addEventListener("resize", updateViewportVars, { passive: true });
-    vv.addEventListener("scroll", updateViewportVars, { passive: true });
+    vv.addEventListener("resize", updateKeyboardVar, { passive: true });
+  }
+  window.addEventListener("resize", updateKeyboardVar, { passive: true });
+  window.addEventListener("orientationchange", () => setTimeout(updateKeyboardVar, 80));
+})();
+
+// ----------------------------------------------------------
+// MODAL MODE (Mobile): Backdrop + Website "tot"
+// -> Im iframe erreichen wir das, indem:
+//    - widget.js das iframe auf Mobile auf 100vw/100vh setzt
+//    - hier wird Backdrop sichtbar + Launcher versteckt
+// ----------------------------------------------------------
+function setModalOpen(open) {
+  if (!isMobileModalTarget()) return;
+
+  document.documentElement.classList.toggle("cw-modal-open", open);
+
+  if (backdropEl) {
+    if (open) backdropEl.classList.remove("cw-hidden");
+    else backdropEl.classList.add("cw-hidden");
   }
 
-  window.addEventListener("resize", updateViewportVars, { passive: true });
-  window.addEventListener("orientationchange", () => {
-    setTimeout(updateViewportVars, 80);
-  });
-})();
+  updateKeyboardVar();
+  // kleine Stabilisierung gegen "stauchen bis scroll" in manchen Browsern
+  requestAnimationFrame(updateKeyboardVar);
+  requestAnimationFrame(updateKeyboardVar);
+}
+
+// Backdrop click = schließen
+backdropEl?.addEventListener("click", () => {
+  chatWindow?.classList.add("cw-hidden");
+  setModalOpen(false);
+});
 
 // ----------------------------------------------------------
 // READY-GATING (gegen Flash)
@@ -116,7 +138,7 @@ function forceInitialHiddenState() {
 forceInitialHiddenState();
 
 // ----------------------------------------------------------
-// Greeting Auto-Hide (erst starten, wenn Greeting wirklich gezeigt wird)
+// Greeting Auto-Hide
 // ----------------------------------------------------------
 let greetingAutoHideTimer = null;
 
@@ -129,23 +151,12 @@ function scheduleGreetingAutoHide() {
 }
 
 // HILFSFUNKTIONEN -------------------------------------------------
-function clamp01(n) {
-  return Math.max(0, Math.min(1, n));
-}
-
 function normalizeHexColor(c) {
   const s = String(c || "").trim();
   if (!s) return null;
   if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
   if (/^#[0-9a-fA-F]{3}$/.test(s)) {
-    return (
-      "#" +
-      s
-        .slice(1)
-        .split("")
-        .map((ch) => ch + ch)
-        .join("")
-    );
+    return "#" + s.slice(1).split("").map((ch) => ch + ch).join("");
   }
   return null;
 }
@@ -154,13 +165,13 @@ function hexToRgb(hex) {
   const h = normalizeHexColor(hex);
   if (!h) return null;
   const v = h.slice(1);
-  const r = parseInt(v.slice(0, 2), 16);
-  const g = parseInt(v.slice(2, 4), 16);
-  const b = parseInt(v.slice(4, 6), 16);
-  return { r, g, b };
+  return {
+    r: parseInt(v.slice(0, 2), 16),
+    g: parseInt(v.slice(2, 4), 16),
+    b: parseInt(v.slice(4, 6), 16),
+  };
 }
 
-// relative luminance (sRGB)
 function luminance({ r, g, b }) {
   const srgb = [r, g, b]
     .map((v) => v / 255)
@@ -175,8 +186,7 @@ function pickTextColorMode(headerHex, mode) {
   const rgb = hexToRgb(headerHex);
   if (!rgb) return "dark";
 
-  const lum = luminance(rgb);
-  return lum < 0.42 ? "light" : "dark";
+  return luminance(rgb) < 0.42 ? "light" : "dark";
 }
 
 // Header / Greeting Finder
@@ -244,9 +254,7 @@ function applyThemeColors({ header_color, accent_color, text_color_mode }) {
   const headerEl = findHeaderEl();
   const resolvedTextMode = pickTextColorMode(headerHex, text_color_mode);
 
-  if (headerEl && headerHex) {
-    headerEl.style.backgroundColor = headerHex;
-  }
+  if (headerEl && headerHex) headerEl.style.backgroundColor = headerHex;
 
   const headerTitle = findHeaderTitleEl();
   const headerTextColor = resolvedTextMode === "light" ? "#ffffff" : "#111827";
@@ -258,10 +266,6 @@ function applyThemeColors({ header_color, accent_color, text_color_mode }) {
     if (launcherBtn) launcherBtn.style.backgroundColor = accentHex;
     if (sendBtn) sendBtn.style.backgroundColor = accentHex;
   }
-
-  if (headerHex) document.documentElement.style.setProperty("--cw-header-color", headerHex);
-  if (accentHex) document.documentElement.style.setProperty("--cw-accent-color", accentHex);
-  document.documentElement.style.setProperty("--cw-header-text-color", headerTextColor);
 }
 
 // Header-Avatar anwenden
@@ -321,9 +325,7 @@ function mergeSettings(base, incoming) {
     "avatar_url",
   ];
   for (const k of keys) {
-    if (typeof incoming[k] !== "undefined" && incoming[k] !== null) {
-      out[k] = incoming[k];
-    }
+    if (typeof incoming[k] !== "undefined" && incoming[k] !== null) out[k] = incoming[k];
   }
   return out;
 }
@@ -332,7 +334,6 @@ function mergeSettings(base, incoming) {
 function createMessageRow({ sender, text }) {
   const row = document.createElement("div");
   row.className = "cw-row";
-
   if (sender === "user") row.classList.add("cw-row-user");
 
   const avatar = document.createElement("div");
@@ -370,7 +371,7 @@ function appendMessage(sender, text) {
 }
 
 // ----------------------------------------------------------
-// TYPING INDICATOR LOGIK
+// TYPING INDICATOR
 // ----------------------------------------------------------
 let typingEl = null;
 
@@ -416,9 +417,7 @@ function showTypingIndicator() {
 }
 
 function hideTypingIndicator() {
-  if (typingEl && typingEl.parentNode) {
-    typingEl.parentNode.removeChild(typingEl);
-  }
+  if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
   typingEl = null;
 }
 
@@ -433,10 +432,7 @@ async function fetchBotReply(userText) {
     const res = await fetch(ASK_URL, {
       method: "POST",
       headers,
-      body: JSON.stringify({
-        message: userText,
-        widget_key: WIDGET_KEY || undefined,
-      }),
+      body: JSON.stringify({ message: userText, widget_key: WIDGET_KEY || undefined }),
     });
 
     if (!res.ok) {
@@ -446,9 +442,7 @@ async function fetchBotReply(userText) {
       let fallback = `Serverfehler (${res.status}).`;
       try {
         const errData = await res.json();
-        if (errData && (errData.error || errData.message)) {
-          fallback = errData.message || errData.error;
-        }
+        if (errData && (errData.error || errData.message)) fallback = errData.message || errData.error;
       } catch (_) {}
       return fallback;
     }
@@ -482,9 +476,8 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    const incoming = data.widget_settings || data.settings || null;
-    return incoming;
-  } catch (e) {
+    return data.widget_settings || data.settings || null;
+  } catch (_) {
     return null;
   }
 }
@@ -493,12 +486,10 @@ function applyWidgetSettings(settings) {
   const normalized = normalizeIncomingSettings(settings) || settings;
   widgetState.settings = mergeSettings(widgetState.settings, normalized);
 
-  // Header Titel
   const titleEl = findHeaderTitleEl();
   const botName = String(widgetState.settings.bot_name || "").trim();
   if (titleEl && botName) titleEl.textContent = botName;
 
-  // Greeting Text + Sichtbarkeit
   const greetTextEl = findGreetingTextEl();
   const greetText = String(widgetState.settings.greeting_text || "").trim();
   if (greetTextEl) greetTextEl.textContent = greetText;
@@ -512,16 +503,12 @@ function applyWidgetSettings(settings) {
     }
   }
 
-  // Header Avatar
   applyHeaderAvatar(widgetState.settings.avatar_url);
-
-  // Farben
   applyThemeColors(widgetState.settings);
 }
 
 // ----------------------------------------------------------
-// Mobile Input "Quality": weniger Autofill-Mist (hilft nicht immer,
-// aber ist sauber + macht Enter=Send)
+// Input hardening
 // ----------------------------------------------------------
 (function hardenInput() {
   if (!inputEl) return;
@@ -533,32 +520,22 @@ function applyWidgetSettings(settings) {
   inputEl.setAttribute("enterkeyhint", "send");
 })();
 
-// ----------------------------------------------------------
-// OPEN/CLOSE helpers (für viewport recalcs)
-// ----------------------------------------------------------
-function onChatOpenChanged() {
-  updateViewportVars();
-  // Doppelt RAF hilft gegen "gestaucht bis scroll" in manchen Browsern
-  requestAnimationFrame(() => updateViewportVars());
-  requestAnimationFrame(() => updateViewportVars());
-}
-
 // UI-AKTIONEN -----------------------------------------------------
 launcherBtn?.addEventListener("click", () => {
   const isHidden = chatWindow.classList.contains("cw-hidden");
   if (isHidden) {
     chatWindow.classList.remove("cw-hidden");
     if (greetingEl) greetingEl.style.display = "none";
-    onChatOpenChanged();
+    setModalOpen(true);
   } else {
     chatWindow.classList.add("cw-hidden");
-    onChatOpenChanged();
+    setModalOpen(false);
   }
 });
 
 closeBtn?.addEventListener("click", () => {
   chatWindow.classList.add("cw-hidden");
-  onChatOpenChanged();
+  setModalOpen(false);
 });
 
 greetingCloseBtn?.addEventListener("click", () => {
@@ -579,39 +556,34 @@ formEl?.addEventListener("submit", async (e) => {
 
   appendMessage("user", userText);
 
-  // Input leeren
   inputEl.value = "";
 
-  // MOBILE: Keyboard schließen beim Senden (das ist dein gewünschtes Upgrade)
+  // Keyboard schließen beim Senden (wichtiges Upgrade)
   const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  if (isCoarse) {
-    inputEl.blur(); // <- wichtigste Zeile gegen Bar/Shift
-  } else {
-    inputEl.focus();
-  }
+  if (isCoarse) inputEl.blur();
+  else inputEl.focus();
 
   showTypingIndicator();
-  updateViewportVars();
+  updateKeyboardVar();
 
   let replyText;
   try {
     replyText = await fetchBotReply(userText);
-  } catch (err) {
+  } catch (_) {
     replyText = "Es gab ein Problem bei der Antwort.";
   }
 
   hideTypingIndicator();
   appendMessage("bot", replyText);
 
-  // sicherheitshalber am Ende nochmal scroll + viewport update
   setTimeout(() => {
     if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
-    updateViewportVars();
+    updateKeyboardVar();
   }, 0);
 });
 
 // ----------------------------------------------------------
-// INIT (Config -> Apply -> Ready -> Initial Message)
+// INIT
 // ----------------------------------------------------------
 (async function initWidget() {
   if (!WIDGET_KEY) {
@@ -620,9 +592,7 @@ formEl?.addEventListener("submit", async (e) => {
     return;
   }
 
-  readyTimer = setTimeout(() => {
-    setWidgetReady();
-  }, READY_FALLBACK_MS);
+  readyTimer = setTimeout(() => setWidgetReady(), READY_FALLBACK_MS);
 
   const cfg = await fetchWidgetConfig();
   if (cfg) {
@@ -640,5 +610,5 @@ formEl?.addEventListener("submit", async (e) => {
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);
 
-  updateViewportVars();
+  updateKeyboardVar();
 })();

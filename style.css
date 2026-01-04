@@ -9,7 +9,6 @@
 
 :root {
   --cw-kb: 0px; /* wird per JS gesetzt (Keyboard-Höhe) */
-  --cw-vh: 1vh; /* optional stabilisiert (per JS) */
 }
 
 body {
@@ -18,6 +17,25 @@ body {
   background-color: #fff;
   color: #000;
   min-height: 100vh;
+}
+
+/* Backdrop (Fullscreen Overlay) --------------------------------- */
+.cw-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 9997; /* unter dem Fenster (9998), über allem anderen */
+  pointer-events: auto;
+  touch-action: none; /* verhindert Scroll-Gesten */
+}
+
+.cw-hidden {
+  display: none;
+}
+
+/* Wenn Modal offen ist: Launcher verstecken (nur im iframe) */
+.cw-modal-open #cw-launcher-wrap {
+  display: none;
 }
 
 /* POSITIONIERT ALLES UNTEN RECHTS ------------------------------- */
@@ -54,13 +72,9 @@ body {
   line-height: 1.4;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(0, 0, 0, 0.08);
-
-  /* default hidden (kein Flash-Text) */
   display: none;
-
   align-items: center;
   gap: 10px;
-
   white-space: nowrap;
   max-width: none;
 }
@@ -128,6 +142,9 @@ body {
   z-index: 9998;
 
   font-size: 14px;
+
+  /* hilft in manchen Mobile-Browsern gegen Render-Jank */
+  transform: translateZ(0);
 }
 
 .cw-hidden {
@@ -229,7 +246,6 @@ body {
   flex-direction: column;
   gap: 16px;
 
-  /* Mobile Browser (Chrome/Google App) smooth */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
@@ -306,8 +322,6 @@ body {
   padding: 8px;
   gap: 8px;
   background-color: #fff;
-
-  /* verhindert, dass “Body-scroll” Einfluss hat */
   flex-shrink: 0;
 }
 
@@ -412,31 +426,18 @@ body {
   opacity: 0.6;
 }
 
-.cw-dot:nth-child(2) {
-  animation-delay: 0.15s;
-}
-.cw-dot:nth-child(3) {
-  animation-delay: 0.3s;
-}
+.cw-dot:nth-child(2) { animation-delay: 0.15s; }
+.cw-dot:nth-child(3) { animation-delay: 0.3s; }
 
 @keyframes cw-bounce {
-  0%,
-  80%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.4;
-  }
-  40% {
-    transform: translateY(-3px);
-    opacity: 1;
-  }
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-3px); opacity: 1; }
 }
 
 /* =============================================================== */
-/* MOBILE (stabil: kein “zu hoch”, kein “gestaucht”)               */
-/* - nutzt top+bottom statt vh                                     */
-/* - berücksichtigt Safe-Area + Keyboard-Push (var --cw-kb)        */
-/* - besser für Safari / Chrome / Google App / Android             */
+/* MOBILE: Box bleibt Box, aber Modal-Backdrop sperrt die Website   */
+/* - Fenster bleibt "widget-like" (Rand/Shadow sichtbar)            */
+/* - Keyboard-Push nur als Max-Height (nicht full-screen)           */
 /* =============================================================== */
 @media (max-width: 480px), (max-height: 740px) {
   #cw-launcher-wrap {
@@ -449,32 +450,21 @@ body {
     right: 12px;
     width: auto;
 
-    /* oben: safe-area berücksichtigen */
-    top: calc(12px + env(safe-area-inset-top));
+    bottom: calc(92px + env(safe-area-inset-bottom));
 
-    /* unten: Platz für Launcher + Safe-Area + Keyboard */
-    bottom: calc(92px + env(safe-area-inset-bottom) + var(--cw-kb));
+    /* widget-like Höhe */
+    height: min(70vh, 560px);
 
-    /* statt height -> auto, damit nix abgeschnitten wird */
-    height: auto;
-    max-height: none;
+    /* wenn Keyboard offen ist, drückt es die max-height runter */
+    max-height: calc(100dvh - 140px - env(safe-area-inset-bottom) - var(--cw-kb));
 
     border-radius: 14px;
-
-    /* hilft gegen Rendering/Jank in manchen Browsern */
-    transform: translateZ(0);
   }
 
-  .cw-body {
-    padding: 14px;
-  }
+  .cw-body { padding: 14px; }
 
   /* verhindert iOS Auto-Zoom */
-  .cw-input {
-    font-size: 16px;
-  }
+  .cw-input { font-size: 16px; }
 
-  .cw-header {
-    padding: 10px 14px;
-  }
+  .cw-header { padding: 10px 14px; }
 }
