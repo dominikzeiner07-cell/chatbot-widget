@@ -8,26 +8,7 @@
 }
 
 :root {
-  --cw-kb: 0px;          /* wird per JS gesetzt (Keyboard-Höhe) */
-  --cw-zoom-fix: 1;      /* wird per JS gesetzt (Google iOS App / WKWebView Scale Fix) */
-}
-
-/* Wichtig gegen iOS/WKWebView Autosizing */
-html, body {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-/* Wrapper für Zoom-Fix (transform macht sonst fixed tricky – deswegen wrapper fullscreen) */
-#cw-root {
-  position: fixed;
-  inset: 0;
-
-  /* Trick: erst “größer” machen, dann zurückskalieren -> keine Clipping-Probleme */
-  width: calc(100% / var(--cw-zoom-fix));
-  height: calc(100% / var(--cw-zoom-fix));
-  transform: scale(var(--cw-zoom-fix));
-  transform-origin: 0 0;
+  --cw-kb: 0px; /* wird per JS gesetzt (Keyboard-Höhe) */
 }
 
 body {
@@ -164,6 +145,10 @@ body {
 
   /* hilft in manchen Mobile-Browsern gegen Render-Jank */
   transform: translateZ(0);
+}
+
+.cw-hidden {
+  display: none;
 }
 
 /* HEADER -------------------------------------------------------- */
@@ -451,7 +436,7 @@ body {
 
 /* =============================================================== */
 /* MOBILE: Box bleibt Box, aber Modal-Backdrop sperrt die Website   */
-/* - Fenster bleibt "widget-like" (Rand/Shadow sichtbar)           */
+/* - Fenster bleibt "widget-like" (Rand/Shadow sichtbar)            */
 /* - Keyboard-Push nur als Max-Height (nicht full-screen)           */
 /* =============================================================== */
 @media (max-width: 480px), (max-height: 740px) {
