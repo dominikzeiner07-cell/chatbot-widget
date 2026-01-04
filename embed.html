@@ -2,7 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Hardening: viewport-fit + max scale (hilft besonders in Google iOS App / WKWebView) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>Chat Widget Embed</title>
 
   <link rel="stylesheet" href="./style.css" />
@@ -16,6 +17,10 @@
       padding: 0;
       background: transparent !important;
       overflow: hidden;
+
+      /* wichtig gegen iOS / WKWebView Text-Autosizing */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
 
     /* style.css setzt body auf min-height:100vh + weiß; im iframe überschreiben */
@@ -73,60 +78,65 @@
 </head>
 <body>
 
-  <!-- Fullscreen Backdrop (nur aktiv, wenn Chat offen + Mobile) -->
-  <div id="cw-backdrop" class="cw-backdrop cw-hidden" aria-hidden="true"></div>
+  <!-- Wichtig: Wrapper fürs Zoom-Fix (damit wir bei Google iOS App sauber gegen-scalen können) -->
+  <div id="cw-root">
 
-  <!-- Chat-Launcher -->
-  <div id="cw-launcher-wrap">
-    <div id="cw-greeting" class="cw-greeting">
-      <span class="cw-greeting-text">Ich bin hier, falls du Hilfe benötigst!</span>
-      <button class="cw-greeting-close" type="button" aria-label="Begrüßung schließen">×</button>
-    </div>
+    <!-- Fullscreen Backdrop (nur aktiv, wenn Chat offen + Mobile) -->
+    <div id="cw-backdrop" class="cw-backdrop cw-hidden" aria-hidden="true"></div>
 
-    <button id="cw-launcher" type="button" aria-label="Chat öffnen">
-      <span class="cw-launcher-icon">💬</span>
-    </button>
-  </div>
-
-  <!-- Chat Window -->
-  <aside id="cw-window" class="cw-window cw-hidden" role="dialog" aria-label="Support-Chat">
-    <header class="cw-header">
-      <div class="cw-header-left">
-        <div class="cw-header-avatar" aria-label="Bot Avatar">
-          <img id="cw-avatar-img" alt="Bot Avatar" style="display:none;" />
-          <div id="cw-avatar-fallback" class="cw-avatar-fallback" aria-hidden="true">◉</div>
-        </div>
-
-        <div class="cw-header-texts">
-          <div class="cw-header-title">Ich helfe dir gerne!</div>
-          <div class="cw-header-subline">
-            <span class="cw-header-status">Online</span>
-            <span class="cw-header-separator">–</span>
-            <span class="cw-header-brand">powered by ChatBasis</span>
-          </div>
-        </div>
+    <!-- Chat-Launcher -->
+    <div id="cw-launcher-wrap">
+      <div id="cw-greeting" class="cw-greeting">
+        <span class="cw-greeting-text">Ich bin hier, falls du Hilfe benötigst!</span>
+        <button class="cw-greeting-close" type="button" aria-label="Begrüßung schließen">×</button>
       </div>
 
-      <button class="cw-close" id="cw-close" type="button" aria-label="Fenster schließen">×</button>
-    </header>
-
-    <main class="cw-body" id="cw-body" aria-live="polite"></main>
-
-    <form class="cw-composer" id="cw-form">
-      <input
-        id="cw-input"
-        class="cw-input"
-        type="text"
-        maxlength="1000"
-        autocomplete="off"
-        placeholder="Schreib eine Nachricht…"
-        aria-label="Nachricht eingeben"
-      />
-      <button id="cw-send" class="cw-send" type="submit" aria-label="Senden">
-        <span class="cw-send-arrow">➤</span>
+      <button id="cw-launcher" type="button" aria-label="Chat öffnen">
+        <span class="cw-launcher-icon">💬</span>
       </button>
-    </form>
-  </aside>
+    </div>
+
+    <!-- Chat Window -->
+    <aside id="cw-window" class="cw-window cw-hidden" role="dialog" aria-label="Support-Chat">
+      <header class="cw-header">
+        <div class="cw-header-left">
+          <div class="cw-header-avatar" aria-label="Bot Avatar">
+            <img id="cw-avatar-img" alt="Bot Avatar" style="display:none;" />
+            <div id="cw-avatar-fallback" class="cw-avatar-fallback" aria-hidden="true">◉</div>
+          </div>
+
+          <div class="cw-header-texts">
+            <div class="cw-header-title">Ich helfe dir gerne!</div>
+            <div class="cw-header-subline">
+              <span class="cw-header-status">Online</span>
+              <span class="cw-header-separator">–</span>
+              <span class="cw-header-brand">powered by ChatBasis</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="cw-close" id="cw-close" type="button" aria-label="Fenster schließen">×</button>
+      </header>
+
+      <main class="cw-body" id="cw-body" aria-live="polite"></main>
+
+      <form class="cw-composer" id="cw-form">
+        <input
+          id="cw-input"
+          class="cw-input"
+          type="text"
+          maxlength="1000"
+          autocomplete="off"
+          placeholder="Schreib eine Nachricht…"
+          aria-label="Nachricht eingeben"
+        />
+        <button id="cw-send" class="cw-send" type="submit" aria-label="Senden">
+          <span class="cw-send-arrow">➤</span>
+        </button>
+      </form>
+    </aside>
+
+  </div>
 
   <script>
     var sp = new URLSearchParams(location.search);

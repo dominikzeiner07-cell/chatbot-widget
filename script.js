@@ -51,7 +51,8 @@ const widgetState = {
 };
 
 // ----------------------------------------------------------
-// MOBILE / KEYBOARD VAR (nur --cw-kb, minimal, ohne Fullscreen-Layout)
+// MOBILE / KEYBOARD VAR (nur --cw-kb)
+// + ZOOM-FIX VAR (Google iOS App / WKWebView)
 // ----------------------------------------------------------
 const root = document.documentElement;
 
@@ -75,6 +76,10 @@ function isMobileModalTarget() {
   return !!(coarse && small);
 }
 
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
 function updateKeyboardVar() {
   const vv = window.visualViewport;
   let kb = 0;
@@ -86,15 +91,60 @@ function updateKeyboardVar() {
   setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
 }
 
-(function initKeyboardVar() {
+/**
+ * Google iOS App / manche WKWebViews rendern manchmal “kleiner” (interner scale != 1).
+ * Wir gleichen das optisch aus: cwZoomFix = 1 / scale.
+ * Nur auf Mobile/Touch und nur wenn der scale wirklich abweicht.
+ */
+function updateZoomFixVar() {
+  if (!isMobileModalTarget()) {
+    setCssVar("--cw-zoom-fix", "1");
+    return;
+  }
+
+  const vv = window.visualViewport;
+  const scale = vv && typeof vv.scale === "number" ? vv.scale : 1;
+
+  // Wenn jemand manuell zoomt: wir halten es stabil, aber clampen hart.
+  // Und nur, wenn es deutlich abweicht (sonst keine Flicker).
+  if (Math.abs(scale - 1) < 0.02) {
+    setCssVar("--cw-zoom-fix", "1");
+    return;
+  }
+
+  const fix = clamp(1 / scale, 0.85, 1.25);
+  setCssVar("--cw-zoom-fix", String(fix));
+}
+
+(function initViewportHelpers() {
   updateKeyboardVar();
+  updateZoomFixVar();
 
   const vv = window.visualViewport;
   if (vv) {
-    vv.addEventListener("resize", updateKeyboardVar, { passive: true });
+    vv.addEventListener("resize", () => {
+      updateKeyboardVar();
+      updateZoomFixVar();
+    }, { passive: true });
+
+    // scroll-event kann bei iOS/Google App den scale beeinflussen
+    vv.addEventListener("scroll", () => {
+      updateKeyboardVar();
+      updateZoomFixVar();
+    }, { passive: true });
   }
-  window.addEventListener("resize", updateKeyboardVar, { passive: true });
-  window.addEventListener("orientationchange", () => setTimeout(updateKeyboardVar, 80));
+
+  window.addEventListener("resize", () => {
+    updateKeyboardVar();
+    updateZoomFixVar();
+  }, { passive: true });
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+      updateKeyboardVar();
+      updateZoomFixVar();
+    }, 120);
+  });
 })();
 
 // ----------------------------------------------------------
@@ -111,12 +161,11 @@ function notifyParentModal(open) {
 }
 
 function setModalOpen(open) {
-  // Parent informieren (Host sperrt dann Scroll auf Mobile)
   notifyParentModal(open);
 
-  // Backdrop/Modal-Class nur auf Mobile innerhalb des iframes
   if (!isMobileModalTarget()) {
     updateKeyboardVar();
+    updateZoomFixVar();
     return;
   }
 
@@ -128,9 +177,15 @@ function setModalOpen(open) {
   }
 
   updateKeyboardVar();
-  // kleine Stabilisierung gegen Jank
-  requestAnimationFrame(updateKeyboardVar);
-  requestAnimationFrame(updateKeyboardVar);
+  updateZoomFixVar();
+  requestAnimationFrame(() => {
+    updateKeyboardVar();
+    updateZoomFixVar();
+  });
+  requestAnimationFrame(() => {
+    updateKeyboardVar();
+    updateZoomFixVar();
+  });
 }
 
 // Backdrop click = schließen
@@ -588,6 +643,7 @@ formEl?.addEventListener("submit", async (e) => {
 
   showTypingIndicator();
   updateKeyboardVar();
+  updateZoomFixVar();
 
   let replyText;
   try {
@@ -602,6 +658,7 @@ formEl?.addEventListener("submit", async (e) => {
   setTimeout(() => {
     if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
     updateKeyboardVar();
+    updateZoomFixVar();
   }, 0);
 });
 
@@ -634,4 +691,5 @@ formEl?.addEventListener("submit", async (e) => {
   appendMessage("bot", first);
 
   updateKeyboardVar();
+  updateZoomFixVar();
 })();
