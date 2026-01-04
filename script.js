@@ -56,7 +56,9 @@ const widgetState = {
 const root = document.documentElement;
 
 function setCssVar(name, value) {
-  try { root.style.setProperty(name, value); } catch (_) {}
+  try {
+    root.style.setProperty(name, value);
+  } catch (_) {}
 }
 
 function isChatOpen() {
@@ -66,7 +68,10 @@ function isChatOpen() {
 // Mobile detection für Modal-Lock (Handy/Tablet Touch)
 function isMobileModalTarget() {
   const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  const small = window.matchMedia && (window.matchMedia("(max-width: 820px)").matches || window.matchMedia("(max-height: 900px)").matches);
+  const small =
+    window.matchMedia &&
+    (window.matchMedia("(max-width: 820px)").matches ||
+      window.matchMedia("(max-height: 900px)").matches);
   return !!(coarse && small);
 }
 
@@ -94,12 +99,26 @@ function updateKeyboardVar() {
 
 // ----------------------------------------------------------
 // MODAL MODE (Mobile): Backdrop + Website "tot"
-// -> Im iframe erreichen wir das, indem:
-//    - widget.js das iframe auf Mobile auf 100vw/100vh setzt
-//    - hier wird Backdrop sichtbar + Launcher versteckt
+// -> Website dahinter sperren wir im Parent (widget.js)
+//    per postMessage, wenn open/close passiert.
 // ----------------------------------------------------------
+function notifyParentModal(open) {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "CW_MODAL", open: !!open }, "*");
+    }
+  } catch (_) {}
+}
+
 function setModalOpen(open) {
-  if (!isMobileModalTarget()) return;
+  // Parent informieren (Host sperrt dann Scroll auf Mobile)
+  notifyParentModal(open);
+
+  // Backdrop/Modal-Class nur auf Mobile innerhalb des iframes
+  if (!isMobileModalTarget()) {
+    updateKeyboardVar();
+    return;
+  }
 
   document.documentElement.classList.toggle("cw-modal-open", open);
 
@@ -109,7 +128,7 @@ function setModalOpen(open) {
   }
 
   updateKeyboardVar();
-  // kleine Stabilisierung gegen "stauchen bis scroll" in manchen Browsern
+  // kleine Stabilisierung gegen Jank
   requestAnimationFrame(updateKeyboardVar);
   requestAnimationFrame(updateKeyboardVar);
 }
@@ -156,7 +175,11 @@ function normalizeHexColor(c) {
   if (!s) return null;
   if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
   if (/^#[0-9a-fA-F]{3}$/.test(s)) {
-    return "#" + s.slice(1).split("").map((ch) => ch + ch).join("");
+    return "#" + s
+      .slice(1)
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
   }
   return null;
 }
