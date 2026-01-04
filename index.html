@@ -2,13 +2,16 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, height=device-height, viewport-fit=cover, maximum-scale=1"
+  />
+  <meta name="format-detection" content="telephone=no" />
   <title>Chat Widget</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
 
-  <!-- Chat-Launcher: Button + kleine “Ich bin hier …”-Bubble -->
+<body>
   <div id="cw-launcher-wrap">
     <div id="cw-greeting" class="cw-greeting">
       <span>Ich bin hier, falls du Hilfe benötigst!</span>
@@ -20,9 +23,7 @@
     </button>
   </div>
 
-  <!-- Das Chat-Fenster -->
   <aside id="cw-window" class="cw-window cw-hidden" role="dialog" aria-label="Support-Chat">
-    <!-- Header -->
     <header class="cw-header">
       <div class="cw-header-left">
         <div class="cw-header-avatar">
@@ -42,10 +43,8 @@
       <button class="cw-close" id="cw-close" aria-label="Fenster schließen">×</button>
     </header>
 
-    <!-- Nachrichtenbereich -->
     <main class="cw-body" id="cw-body" aria-live="polite"></main>
 
-    <!-- Composer -->
     <form class="cw-composer" id="cw-form">
       <input
         id="cw-input"
@@ -62,13 +61,11 @@
     </form>
   </aside>
 
-  <!-- Konfig für dieses Widget -->
   <script>
     window.CHATBOT_API_BASE = "http://localhost:5051";
     window.CHATBOT_WIDGET_KEY = "270f20d8f5f04a1cb4cd0fdceb588ed7";
   </script>
 
-  <!-- Logic -->
   <script src="script.js"></script>
 </body>
 </html>
