@@ -1,4 +1,4 @@
-// ELEMENTE REFERENZIEREN -----------------------------------------
+script.js: // ELEMENTE REFERENZIEREN -----------------------------------------
 const launcherWrap = document.getElementById("cw-launcher-wrap");
 const greetingEl = document.getElementById("cw-greeting");
 const greetingCloseBtn = greetingEl?.querySelector(".cw-greeting-close");
@@ -25,8 +25,8 @@ const API_BASE =
   "http://localhost:5051";
 
 const API_BASE_CLEAN = API_BASE.replace(/\/+$/, "");
-const ASK_URL = API_BASE_CLEAN.endsWith("/ask") ? API_BASE_CLEAN : `${API_BASE_CLEAN}/ask`;
-const CONFIG_URL = `${API_BASE_CLEAN}/widget/config`;
+const ASK_URL = API_BASE_CLEAN.endsWith("/ask") ? API_BASE_CLEAN : ${API_BASE_CLEAN}/ask;
+const CONFIG_URL = ${API_BASE_CLEAN}/widget/config;
 
 const WIDGET_KEY =
   window.CHATBOT_WIDGET_KEY ||
@@ -83,7 +83,7 @@ function updateKeyboardVar() {
     kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   }
 
-  setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
+  setCssVar("--cw-kb", isChatOpen() ? ${kb}px : "0px");
 }
 
 (function initKeyboardVar() {
@@ -369,7 +369,7 @@ function createMessageRow({ sender, text }) {
     const url = String(widgetState.settings.avatar_url || "").trim();
     if (url) {
       avatar.textContent = "";
-      avatar.style.backgroundImage = `url("${url}")`;
+      avatar.style.backgroundImage = url("${url}");
       avatar.style.backgroundSize = "cover";
       avatar.style.backgroundPosition = "center";
       avatar.style.backgroundRepeat = "no-repeat";
@@ -410,7 +410,7 @@ function showTypingIndicator() {
   const url = String(widgetState.settings.avatar_url || "").trim();
   if (url) {
     avatar.textContent = "";
-    avatar.style.backgroundImage = `url("${url}")`;
+    avatar.style.backgroundImage = url("${url}");
     avatar.style.backgroundSize = "cover";
     avatar.style.backgroundPosition = "center";
     avatar.style.backgroundRepeat = "no-repeat";
@@ -462,7 +462,7 @@ async function fetchBotReply(userText) {
       if (res.status === 401) return "Auth-Fehler – Widget-Key prüfen.";
       if (res.status === 429) return "Zu viele Anfragen / Rate-Limit.";
 
-      let fallback = `Serverfehler (${res.status}).`;
+      let fallback = Serverfehler (${res.status}).;
       try {
         const errData = await res.json();
         if (errData && (errData.error || errData.message)) fallback = errData.message || errData.error;
@@ -489,7 +489,7 @@ async function fetchWidgetConfig() {
   const headers = { "X-Widget-Key": WIDGET_KEY };
 
   try {
-    const res = await fetch(`${CONFIG_URL}?widget_key=${encodeURIComponent(WIDGET_KEY)}`, {
+    const res = await fetch(${CONFIG_URL}?widget_key=${encodeURIComponent(WIDGET_KEY)}, {
       method: "GET",
       headers,
     });
