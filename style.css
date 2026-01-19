@@ -475,14 +475,22 @@ body {
   font-size: 12px;
   line-height: 1.35;
   color: rgba(0, 0, 0, 0.55);
-  padding: 2px 2px 0;
-  margin: -6px 0 6px;
+
+  /* sauber zentrieren */
+  text-align: center;
+  width: 100%;
+  max-width: 340px;
+  margin: 6px auto 10px;
+
+  /* optisch schöner Abstand */
+  padding: 6px 10px 0;
   background: transparent;
 }
 
 .cw-legal-hint a {
   color: rgba(0, 0, 0, 0.55);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .cw-legal-hint a:hover {
