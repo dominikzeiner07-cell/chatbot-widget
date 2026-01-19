@@ -70,10 +70,10 @@ function ensureLegalHint() {
   el.className = "cw-legal-hint";
 
   el.innerHTML =
-    `Mit dem Senden einer Nachricht stimmst du unseren ` +
-    `<a href="${LEGAL_URLS.datenschutz}" target="_blank" rel="noopener noreferrer">Datenschutz</a>, ` +
-    `<a href="${LEGAL_URLS.impressum}" target="_blank" rel="noopener noreferrer">Impressum</a> ` +
-    `und den <a href="${LEGAL_URLS.bedingungen}" target="_blank" rel="noopener noreferrer">Bedingungen</a> zu.`;
+  `Mit dem Absenden einer Nachricht akzeptierst du unsere ` +
+  `<a href="${LEGAL_URLS.datenschutz}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>, ` +
+  `das <a href="${LEGAL_URLS.impressum}" target="_blank" rel="noopener noreferrer">Impressum</a> ` +
+  `und die <a href="${LEGAL_URLS.bedingungen}" target="_blank" rel="noopener noreferrer">Bedingungen</a>.`;
 
   // ganz oben in die Chat-Liste setzen
   bodyEl.insertBefore(el, bodyEl.firstChild);
