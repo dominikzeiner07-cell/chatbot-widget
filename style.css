@@ -468,3 +468,23 @@ body {
 
   .cw-header { padding: 10px 14px; }
 }
+/* =============================================================== */
+/* LEGAL / PRIVACY HINWEIS (steht oben im Chat und scrollt weg)     */
+/* =============================================================== */
+.cw-legal-hint {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(0, 0, 0, 0.55);
+  padding: 2px 2px 0;
+  margin: -6px 0 6px;
+  background: transparent;
+}
+
+.cw-legal-hint a {
+  color: rgba(0, 0, 0, 0.55);
+  text-decoration: underline;
+}
+
+.cw-legal-hint a:hover {
+  color: rgba(0, 0, 0, 0.8);
+}

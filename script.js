@@ -51,6 +51,35 @@ const widgetState = {
 };
 
 // ----------------------------------------------------------
+// LEGAL LINKS (GitHub Pages)
+// ----------------------------------------------------------
+const LEGAL_URLS = {
+  datenschutz: "https://dominikzeiner07-cell.github.io/chatbot-legal/datenschutz/",
+  impressum: "https://dominikzeiner07-cell.github.io/chatbot-legal/impressum/",
+  bedingungen: "https://dominikzeiner07-cell.github.io/chatbot-legal/bedingungen/",
+};
+
+function ensureLegalHint() {
+  if (!bodyEl) return;
+
+  // nur 1x einfügen
+  if (document.getElementById("cw-legal-hint")) return;
+
+  const el = document.createElement("div");
+  el.id = "cw-legal-hint";
+  el.className = "cw-legal-hint";
+
+  el.innerHTML =
+    `Mit dem Senden einer Nachricht stimmst du unseren ` +
+    `<a href="${LEGAL_URLS.datenschutz}" target="_blank" rel="noopener noreferrer">Datenschutz</a>, ` +
+    `<a href="${LEGAL_URLS.impressum}" target="_blank" rel="noopener noreferrer">Impressum</a> ` +
+    `und den <a href="${LEGAL_URLS.bedingungen}" target="_blank" rel="noopener noreferrer">Bedingungen</a> zu.`;
+
+  // ganz oben in die Chat-Liste setzen
+  bodyEl.insertBefore(el, bodyEl.firstChild);
+}
+
+// ----------------------------------------------------------
 // MOBILE / KEYBOARD VAR (nur --cw-kb, minimal, ohne Fullscreen-Layout)
 // ----------------------------------------------------------
 const root = document.documentElement;
@@ -632,6 +661,9 @@ formEl?.addEventListener("submit", async (e) => {
 
   if (readyTimer) clearTimeout(readyTimer);
   setWidgetReady();
+
+  // ✅ Legal Hinweis ganz oben im Chat
+  ensureLegalHint();
 
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);
