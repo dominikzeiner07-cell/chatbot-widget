@@ -492,7 +492,14 @@ async function fetchBotReply(userText) {
 
     if (!res.ok) {
       if (res.status === 401) return "Auth-Fehler – Widget-Key prüfen.";
-      if (res.status === 429) return "Zu viele Anfragen / Rate-Limit.";
+      if (res.status === 429) {
+  let errData = null;
+  try {
+    errData = await res.json();
+  } catch (_) {}
+
+  return errData?.message || "Zu viele Anfragen. Bitte kurz warten und dann erneut versuchen.";
+}
 
       let fallback = `Serverfehler (${res.status}).`;
       try {
