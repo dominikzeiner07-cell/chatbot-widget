@@ -60,9 +60,9 @@ const widgetState = {
 // ----------------------------------------------------------
 // OPTIONAL: Fallback, falls im Admin-UI nichts gesetzt ist
 const DEFAULT_LEGAL_URLS = {
-  privacy_url: "https://dominikzeiner07-cell.github.io/chatbot-legal/datenschutz/",
-  imprint_url: "https://dominikzeiner07-cell.github.io/chatbot-legal/impressum/",
-  terms_url: "https://dominikzeiner07-cell.github.io/chatbot-legal/bedingungen/",
+  privacy_url: "",
+  imprint_url: "",
+  terms_url: "",
 };
 
 function isHttpUrlStr(u) {
@@ -76,9 +76,10 @@ function isHttpUrlStr(u) {
 
 function getLegalLinksFromSettings() {
   const s = widgetState.settings || {};
-  const privacy = String(s.privacy_url || "").trim() || DEFAULT_LEGAL_URLS.privacy_url;
-  const imprint = String(s.imprint_url || "").trim() || DEFAULT_LEGAL_URLS.imprint_url;
-  const terms   = String(s.terms_url || "").trim()   || DEFAULT_LEGAL_URLS.terms_url;
+
+  const privacy = String(s.privacy_url || "").trim();
+  const imprint = String(s.imprint_url || "").trim();
+  const terms   = String(s.terms_url || "").trim();
 
   const links = [
     { label: "Datenschutzerklärung", url: privacy },
