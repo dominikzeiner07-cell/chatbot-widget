@@ -46,6 +46,11 @@ const widgetState = {
     accent_color: null,
     text_color_mode: "auto",
     avatar_url: null,
+
+    // NEW: Legal links (from widget_settings)
+    privacy_url: null,
+    imprint_url: null,
+    terms_url: null,
   },
   configLoaded: false,
 };
@@ -53,30 +58,64 @@ const widgetState = {
 // ----------------------------------------------------------
 // LEGAL LINKS (GitHub Pages)
 // ----------------------------------------------------------
-const LEGAL_URLS = {
-  datenschutz: "https://dominikzeiner07-cell.github.io/chatbot-legal/datenschutz/",
-  impressum: "https://dominikzeiner07-cell.github.io/chatbot-legal/impressum/",
-  bedingungen: "https://dominikzeiner07-cell.github.io/chatbot-legal/bedingungen/",
+// OPTIONAL: Fallback, falls im Admin-UI nichts gesetzt ist
+const DEFAULT_LEGAL_URLS = {
+  privacy_url: "https://dominikzeiner07-cell.github.io/chatbot-legal/datenschutz/",
+  imprint_url: "https://dominikzeiner07-cell.github.io/chatbot-legal/impressum/",
+  terms_url: "https://dominikzeiner07-cell.github.io/chatbot-legal/bedingungen/",
 };
+
+function isHttpUrlStr(u) {
+  try {
+    const url = new URL(String(u || ""));
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch (_) {
+    return false;
+  }
+}
+
+function getLegalLinksFromSettings() {
+  const s = widgetState.settings || {};
+  const privacy = String(s.privacy_url || "").trim() || DEFAULT_LEGAL_URLS.privacy_url;
+  const imprint = String(s.imprint_url || "").trim() || DEFAULT_LEGAL_URLS.imprint_url;
+  const terms   = String(s.terms_url || "").trim()   || DEFAULT_LEGAL_URLS.terms_url;
+
+  const links = [
+    { label: "Datenschutzerklärung", url: privacy },
+    { label: "Impressum", url: imprint },
+    { label: "Bedingungen", url: terms },
+  ].filter((x) => x.url && isHttpUrlStr(x.url));
+
+  return links;
+}
 
 function ensureLegalHint() {
   if (!bodyEl) return;
 
-  // nur 1x einfügen
-  if (document.getElementById("cw-legal-hint")) return;
+  const links = getLegalLinksFromSettings();
+  // Wenn keine brauchbaren Links da sind -> keinen Hinweis anzeigen
+  if (!links.length) return;
 
-  const el = document.createElement("div");
-  el.id = "cw-legal-hint";
-  el.className = "cw-legal-hint";
+  // falls schon vorhanden: updaten statt doppelt einfügen
+  let el = document.getElementById("cw-legal-hint");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "cw-legal-hint";
+    el.className = "cw-legal-hint";
+    bodyEl.insertBefore(el, bodyEl.firstChild);
+  }
 
-  el.innerHTML =
-  `Mit dem Absenden einer Nachricht akzeptierst du unsere ` +
-  `<a href="${LEGAL_URLS.datenschutz}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>, ` +
-  `das <a href="${LEGAL_URLS.impressum}" target="_blank" rel="noopener noreferrer">Impressum</a> ` +
-  `und die <a href="${LEGAL_URLS.bedingungen}" target="_blank" rel="noopener noreferrer">Bedingungen</a>.`;
+  // Text sauber bauen: a, b und c
+  const linkHtml = links.map((l) =>
+    `<a href="${l.url}" target="_blank" rel="noopener noreferrer">${l.label}</a>`
+  );
 
-  // ganz oben in die Chat-Liste setzen
-  bodyEl.insertBefore(el, bodyEl.firstChild);
+  let joined = "";
+  if (linkHtml.length === 1) joined = linkHtml[0];
+  else if (linkHtml.length === 2) joined = `${linkHtml[0]} und ${linkHtml[1]}`;
+  else joined = `${linkHtml.slice(0, -1).join(", ")} und ${linkHtml[linkHtml.length - 1]}`;
+
+  el.innerHTML = `Mit dem Absenden einer Nachricht akzeptierst du unsere ${joined}.`;
 }
 
 // ----------------------------------------------------------
@@ -353,16 +392,21 @@ function normalizeIncomingSettings(incoming) {
     return undefined;
   };
 
-  return {
-    bot_name: pick(["bot_name", "botName", "name", "bot_name_display"]),
-    user_label: pick(["user_label", "userLabel"]),
-    greeting_text: pick(["greeting_text", "launcherText", "launcher_text", "greetingText"]),
-    first_message: pick(["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
-    header_color: pick(["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
-    accent_color: pick(["accent_color", "accent", "widget_accent", "widget_accent_color"]),
-    text_color_mode: pick(["text_color_mode", "textColorMode"]),
-    avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
-  };
+return {
+  bot_name: pick(["bot_name", "botName", "name", "bot_name_display"]),
+  user_label: pick(["user_label", "userLabel"]),
+  greeting_text: pick(["greeting_text", "launcherText", "launcher_text", "greetingText"]),
+  first_message: pick(["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
+  header_color: pick(["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
+  accent_color: pick(["accent_color", "accent", "widget_accent", "widget_accent_color"]),
+  text_color_mode: pick(["text_color_mode", "textColorMode"]),
+  avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
+
+  // NEW: Legal links
+  privacy_url: pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]),
+  imprint_url: pick(["imprint_url", "imprintUrl", "impressum_url"]),
+  terms_url: pick(["terms_url", "termsUrl", "agb_url", "conditions_url"]),
+};
 }
 
 function mergeSettings(base, incoming) {
@@ -370,15 +414,20 @@ function mergeSettings(base, incoming) {
   if (!incoming || typeof incoming !== "object") return out;
 
   const keys = [
-    "bot_name",
-    "user_label",
-    "greeting_text",
-    "first_message",
-    "header_color",
-    "accent_color",
-    "text_color_mode",
-    "avatar_url",
-  ];
+  "bot_name",
+  "user_label",
+  "greeting_text",
+  "first_message",
+  "header_color",
+  "accent_color",
+  "text_color_mode",
+  "avatar_url",
+
+  // NEW: Legal links
+  "privacy_url",
+  "imprint_url",
+  "terms_url",
+];
   for (const k of keys) {
     if (typeof incoming[k] !== "undefined" && incoming[k] !== null) out[k] = incoming[k];
   }
@@ -567,8 +616,10 @@ function applyWidgetSettings(settings) {
 
   applyHeaderAvatar(widgetState.settings.avatar_url);
   applyThemeColors(widgetState.settings);
-}
 
+  // NEW: Legal hint immer nach Settings-Apply aktualisieren
+  ensureLegalHint();
+}
 // ----------------------------------------------------------
 // Input hardening
 // ----------------------------------------------------------
@@ -669,8 +720,7 @@ formEl?.addEventListener("submit", async (e) => {
   if (readyTimer) clearTimeout(readyTimer);
   setWidgetReady();
 
-  // ✅ Legal Hinweis ganz oben im Chat
-  ensureLegalHint();
+  
 
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);
