@@ -47,7 +47,7 @@ const widgetState = {
     text_color_mode: "auto",
     avatar_url: null,
 
-    // NEW: Legal links (from widget_settings)
+    // Legal links (privacy only wird genutzt)
     privacy_url: null,
     imprint_url: null,
     terms_url: null,
@@ -56,15 +56,8 @@ const widgetState = {
 };
 
 // ----------------------------------------------------------
-// LEGAL LINKS (GitHub Pages)
+// LEGAL HINWEIS (immer anzeigen; Link nur wenn privacy_url da)
 // ----------------------------------------------------------
-// OPTIONAL: Fallback, falls im Admin-UI nichts gesetzt ist
-const DEFAULT_LEGAL_URLS = {
-  privacy_url: "",
-  imprint_url: "",
-  terms_url: "",
-};
-
 function isHttpUrlStr(u) {
   try {
     const url = new URL(String(u || ""));
@@ -74,30 +67,10 @@ function isHttpUrlStr(u) {
   }
 }
 
-function getLegalLinksFromSettings() {
-  const s = widgetState.settings || {};
-
-  const privacy = String(s.privacy_url || "").trim();
-  const imprint = String(s.imprint_url || "").trim();
-  const terms   = String(s.terms_url || "").trim();
-
-  const links = [
-    { label: "Datenschutzerklärung", url: privacy },
-    { label: "Impressum", url: imprint },
-    { label: "Bedingungen", url: terms },
-  ].filter((x) => x.url && isHttpUrlStr(x.url));
-
-  return links;
-}
-
 function ensureLegalHint() {
   if (!bodyEl) return;
 
-  const links = getLegalLinksFromSettings();
-  // Wenn keine brauchbaren Links da sind -> keinen Hinweis anzeigen
-  if (!links.length) return;
-
-  // falls schon vorhanden: updaten statt doppelt einfügen
+  // Element holen/erzeugen
   let el = document.getElementById("cw-legal-hint");
   if (!el) {
     el = document.createElement("div");
@@ -106,17 +79,18 @@ function ensureLegalHint() {
     bodyEl.insertBefore(el, bodyEl.firstChild);
   }
 
-  // Text sauber bauen: a, b und c
-  const linkHtml = links.map((l) =>
-    `<a href="${l.url}" target="_blank" rel="noopener noreferrer">${l.label}</a>`
-  );
+  const privacy = String(widgetState?.settings?.privacy_url || "").trim();
+  const hasLink = privacy && isHttpUrlStr(privacy);
 
-  let joined = "";
-  if (linkHtml.length === 1) joined = linkHtml[0];
-  else if (linkHtml.length === 2) joined = `${linkHtml[0]} und ${linkHtml[1]}`;
-  else joined = `${linkHtml.slice(0, -1).join(", ")} und ${linkHtml[linkHtml.length - 1]}`;
+  // Text (Variante B, leicht poliert)
+  const line1 = `Um deine Anfrage zu bearbeiten und unseren Service zu verbessern, verarbeiten wir Daten im Rahmen dieses Chats.`;
 
-  el.innerHTML = `Mit dem Absenden einer Nachricht akzeptierst du unsere ${joined}.`;
+  // Link nur wenn URL valide, sonst Plain-Text
+  const line2 = hasLink
+    ? `Weitere Informationen findest du in unserer <a href="${privacy}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
+    : `Weitere Informationen findest du in unserer Datenschutzerklärung.`;
+
+  el.innerHTML = `${line1}<br>${line2}`;
 }
 
 // ----------------------------------------------------------
@@ -393,21 +367,19 @@ function normalizeIncomingSettings(incoming) {
     return undefined;
   };
 
-return {
-  bot_name: pick(["bot_name", "botName", "name", "bot_name_display"]),
-  user_label: pick(["user_label", "userLabel"]),
-  greeting_text: pick(["greeting_text", "launcherText", "launcher_text", "greetingText"]),
-  first_message: pick(["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
-  header_color: pick(["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
-  accent_color: pick(["accent_color", "accent", "widget_accent", "widget_accent_color"]),
-  text_color_mode: pick(["text_color_mode", "textColorMode"]),
-  avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
+  return {
+    bot_name: pick(["bot_name", "botName", "name", "bot_name_display"]),
+    user_label: pick(["user_label", "userLabel"]),
+    greeting_text: pick(["greeting_text", "launcherText", "launcher_text", "greetingText"]),
+    first_message: pick(["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
+    header_color: pick(["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
+    accent_color: pick(["accent_color", "accent", "widget_accent", "widget_accent_color"]),
+    text_color_mode: pick(["text_color_mode", "textColorMode"]),
+    avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
 
-  // NEW: Legal links
-  privacy_url: pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]),
-  imprint_url: pick(["imprint_url", "imprintUrl", "impressum_url"]),
-  terms_url: pick(["terms_url", "termsUrl", "agb_url", "conditions_url"]),
-};
+    // privacy only
+    privacy_url: pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]),
+  };
 }
 
 function mergeSettings(base, incoming) {
@@ -415,20 +387,16 @@ function mergeSettings(base, incoming) {
   if (!incoming || typeof incoming !== "object") return out;
 
   const keys = [
-  "bot_name",
-  "user_label",
-  "greeting_text",
-  "first_message",
-  "header_color",
-  "accent_color",
-  "text_color_mode",
-  "avatar_url",
-
-  // NEW: Legal links
-  "privacy_url",
-  "imprint_url",
-  "terms_url",
-];
+    "bot_name",
+    "user_label",
+    "greeting_text",
+    "first_message",
+    "header_color",
+    "accent_color",
+    "text_color_mode",
+    "avatar_url",
+    "privacy_url",
+  ];
   for (const k of keys) {
     if (typeof incoming[k] !== "undefined" && incoming[k] !== null) out[k] = incoming[k];
   }
@@ -543,13 +511,12 @@ async function fetchBotReply(userText) {
     if (!res.ok) {
       if (res.status === 401) return "Auth-Fehler – Widget-Key prüfen.";
       if (res.status === 429) {
-  let errData = null;
-  try {
-    errData = await res.json();
-  } catch (_) {}
-
-  return errData?.message || "Zu viele Anfragen. Bitte kurz warten und dann erneut versuchen.";
-}
+        let errData = null;
+        try {
+          errData = await res.json();
+        } catch (_) {}
+        return errData?.message || "Zu viele Anfragen. Bitte kurz warten und dann erneut versuchen.";
+      }
 
       let fallback = `Serverfehler (${res.status}).`;
       try {
@@ -618,9 +585,10 @@ function applyWidgetSettings(settings) {
   applyHeaderAvatar(widgetState.settings.avatar_url);
   applyThemeColors(widgetState.settings);
 
-  // NEW: Legal hint immer nach Settings-Apply aktualisieren
+  // Legal hint immer aktualisieren
   ensureLegalHint();
 }
+
 // ----------------------------------------------------------
 // Input hardening
 // ----------------------------------------------------------
@@ -700,6 +668,9 @@ formEl?.addEventListener("submit", async (e) => {
 // INIT
 // ----------------------------------------------------------
 (async function initWidget() {
+  // Legal-Hinweis immer sofort einfügen (auch vor Config)
+  ensureLegalHint();
+
   if (!WIDGET_KEY) {
     setWidgetReady();
     appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
@@ -714,14 +685,14 @@ formEl?.addEventListener("submit", async (e) => {
   } else {
     applyHeaderAvatar(null);
     if (greetingEl) greetingEl.style.display = "none";
+    // trotzdem Hinweis behalten (ohne Link)
+    ensureLegalHint();
   }
 
   widgetState.configLoaded = true;
 
   if (readyTimer) clearTimeout(readyTimer);
   setWidgetReady();
-
-  
 
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);

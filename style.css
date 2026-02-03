@@ -476,13 +476,11 @@ body {
   line-height: 1.35;
   color: rgba(0, 0, 0, 0.55);
 
-  /* sauber zentrieren */
   text-align: center;
   width: 100%;
   max-width: 340px;
-  margin: 6px auto 10px;
+  margin: 6px auto 12px;
 
-  /* optisch schöner Abstand */
   padding: 6px 10px 0;
   background: transparent;
 }
@@ -494,5 +492,5 @@ body {
 }
 
 .cw-legal-hint a:hover {
-  color: rgba(0, 0, 0, 0.8);
+  color: rgba(0, 0, 0, 0.85);
 }
