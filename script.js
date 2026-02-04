@@ -79,7 +79,11 @@ function ensureLegalHint() {
     bodyEl.insertBefore(el, bodyEl.firstChild);
   }
 
-  const privacy = String(widgetState?.settings?.privacy_url || "").trim();
+  const privacy = String(
+  widgetState?.settings?.privacy_url ||
+  widgetState?.settings?.legal?.privacy_url ||
+  ""
+).trim();
   const hasLink = privacy && isHttpUrlStr(privacy);
 
   // Text (Variante B, leicht poliert)
@@ -377,7 +381,11 @@ function normalizeIncomingSettings(incoming) {
     avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
 
     // privacy only
-    privacy_url: pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]),
+    // privacy only (auch verschachtelt unter legal)
+privacy_url:
+  pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
+  (incoming && incoming.legal && (incoming.legal.privacy_url || incoming.legal.privacyUrl)) ??
+  undefined,
   };
 }
 
