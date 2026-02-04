@@ -70,7 +70,6 @@ function isHttpUrlStr(u) {
 function ensureLegalHint() {
   if (!bodyEl) return;
 
-  // Element holen/erzeugen
   let el = document.getElementById("cw-legal-hint");
   if (!el) {
     el = document.createElement("div");
@@ -79,20 +78,16 @@ function ensureLegalHint() {
     bodyEl.insertBefore(el, bodyEl.firstChild);
   }
 
-  const privacy = String(
-  widgetState?.settings?.privacy_url ||
-  widgetState?.settings?.legal?.privacy_url ||
-  ""
-).trim();
+  const privacy = String(widgetState?.settings?.privacy_url || "").trim();
   const hasLink = privacy && isHttpUrlStr(privacy);
 
-  // Text (Variante B, leicht poliert)
-  const line1 = `Um deine Anfrage zu bearbeiten und unseren Service zu verbessern, verarbeiten wir Daten im Rahmen dieses Chats.`;
+  const line1 =
+    "Um deine Anfrage zu bearbeiten und unseren Service zu verbessern, verarbeiten wir Daten im Rahmen dieses Chats.";
 
-  // Link nur wenn URL valide, sonst Plain-Text
- const line2 = hasLink
- ? `Weitere Informationen findest du in unserer <a class="cw-legal-link" href="${privacy}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
-  : `Weitere Informationen findest du in unserer Datenschutzerklärung.`;
+  const line2 = hasLink
+    ? `Weitere Informationen findest du in unserer <a class="cw-legal-link" href="${privacy}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
+    : "Weitere Informationen findest du in unserer Datenschutzerklärung.";
+
   el.innerHTML = `${line1}<br>${line2}`;
 }
 
@@ -111,7 +106,6 @@ function isChatOpen() {
   return chatWindow && !chatWindow.classList.contains("cw-hidden");
 }
 
-// Mobile detection für Modal-Lock (Handy/Tablet Touch)
 function isMobileModalTarget() {
   const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   const small =
@@ -136,17 +130,14 @@ function updateKeyboardVar() {
   updateKeyboardVar();
 
   const vv = window.visualViewport;
-  if (vv) {
-    vv.addEventListener("resize", updateKeyboardVar, { passive: true });
-  }
+  if (vv) vv.addEventListener("resize", updateKeyboardVar, { passive: true });
+
   window.addEventListener("resize", updateKeyboardVar, { passive: true });
   window.addEventListener("orientationchange", () => setTimeout(updateKeyboardVar, 80));
 })();
 
 // ----------------------------------------------------------
 // MODAL MODE (Mobile): Backdrop + Website "tot"
-// -> Website dahinter sperren wir im Parent (widget.js)
-//    per postMessage, wenn open/close passiert.
 // ----------------------------------------------------------
 function notifyParentModal(open) {
   try {
@@ -157,10 +148,8 @@ function notifyParentModal(open) {
 }
 
 function setModalOpen(open) {
-  // Parent informieren (Host sperrt dann Scroll auf Mobile)
   notifyParentModal(open);
 
-  // Backdrop/Modal-Class nur auf Mobile innerhalb des iframes
   if (!isMobileModalTarget()) {
     updateKeyboardVar();
     return;
@@ -174,12 +163,10 @@ function setModalOpen(open) {
   }
 
   updateKeyboardVar();
-  // kleine Stabilisierung gegen Jank
   requestAnimationFrame(updateKeyboardVar);
   requestAnimationFrame(updateKeyboardVar);
 }
 
-// Backdrop click = schließen
 backdropEl?.addEventListener("click", () => {
   chatWindow?.classList.add("cw-hidden");
   setModalOpen(false);
@@ -261,7 +248,6 @@ function pickTextColorMode(headerHex, mode) {
   return luminance(rgb) < 0.42 ? "light" : "dark";
 }
 
-// Header / Greeting Finder
 function findHeaderEl() {
   return (
     document.getElementById("cw-header") ||
@@ -340,7 +326,6 @@ function applyThemeColors({ header_color, accent_color, text_color_mode }) {
   }
 }
 
-// Header-Avatar anwenden
 function applyHeaderAvatar(url) {
   const u = String(url || "").trim();
 
@@ -358,17 +343,26 @@ function applyHeaderAvatar(url) {
   if (headerAvatarFallback) headerAvatarFallback.style.display = "flex";
 }
 
-// Mappt alte/alternative Keys
+// ----------------------------------------------------------
+// Settings normalize/merge
+// ----------------------------------------------------------
 function normalizeIncomingSettings(incoming) {
   if (!incoming || typeof incoming !== "object") return null;
-  const obj = incoming;
 
-  const pick = (keys) => {
+  const pickFrom = (source, keys) => {
+    if (!source || typeof source !== "object") return undefined;
     for (const k of keys) {
-      if (typeof obj[k] !== "undefined" && obj[k] !== null) return obj[k];
+      if (typeof source[k] !== "undefined" && source[k] !== null) return source[k];
     }
     return undefined;
   };
+
+  const pick = (keys) => pickFrom(incoming, keys);
+  const legal = incoming && typeof incoming.legal === "object" ? incoming.legal : null;
+
+  const privacy =
+    pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
+    pickFrom(legal, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]);
 
   return {
     bot_name: pick(["bot_name", "botName", "name", "bot_name_display"]),
@@ -381,11 +375,7 @@ function normalizeIncomingSettings(incoming) {
     avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
 
     // privacy only
-    // privacy only (auch verschachtelt unter legal)
-privacy_url:
-  pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
-  (incoming && incoming.legal && (incoming.legal.privacy_url || incoming.legal.privacyUrl)) ??
-  undefined,
+    privacy_url: privacy,
   };
 }
 
@@ -404,6 +394,7 @@ function mergeSettings(base, incoming) {
     "avatar_url",
     "privacy_url",
   ];
+
   for (const k of keys) {
     if (typeof incoming[k] !== "undefined" && incoming[k] !== null) out[k] = incoming[k];
   }
@@ -562,21 +553,23 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    // 1) Base settings (wie bisher)
+    // Base settings (wie bisher)
     const ws = data.widget_settings || data.settings || {};
+    const wsLegal = ws && typeof ws.legal === "object" ? ws.legal : null;
 
-    // 2) privacy_url kann je nach Backend-Shape woanders liegen
+    // privacy_url kann je nach Backend-Shape woanders liegen
     const privacyCandidate =
       (ws && (ws.privacy_url || ws.privacyUrl || ws.privacy_policy_url || ws.privacyPolicyUrl)) ||
+      (wsLegal &&
+        (wsLegal.privacy_url || wsLegal.privacyUrl || wsLegal.privacy_policy_url || wsLegal.privacyPolicyUrl)) ||
       data.privacy_url ||
       data.privacyUrl ||
       (data.customer && (data.customer.privacy_url || data.customer.privacyUrl)) ||
       null;
 
-    // 3) merged settings zurückgeben
+    // merged settings zurückgeben
     return {
       ...(ws && typeof ws === "object" ? ws : {}),
-      // wir setzen immer privacy_url als canonical key
       ...(privacyCandidate ? { privacy_url: privacyCandidate } : {}),
     };
   } catch (_) {
@@ -663,7 +656,7 @@ formEl?.addEventListener("submit", async (e) => {
 
   inputEl.value = "";
 
-  // Keyboard schließen beim Senden (wichtiges Upgrade)
+  // Keyboard schließen beim Senden
   const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   if (isCoarse) inputEl.blur();
   else inputEl.focus();
@@ -708,7 +701,6 @@ formEl?.addEventListener("submit", async (e) => {
   } else {
     applyHeaderAvatar(null);
     if (greetingEl) greetingEl.style.display = "none";
-    // trotzdem Hinweis behalten (ohne Link)
     ensureLegalHint();
   }
 
