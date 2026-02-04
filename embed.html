@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat Widget Embed</title>
 
-  <link rel="stylesheet" href="./style.css" />
+  <!-- Cache-busted CSS wird per Script gesetzt -->
+  <link id="cw-style" rel="stylesheet" href="./style.css" />
 
   <style>
     /* iframe soll wirklich transparent bleiben */
@@ -129,11 +130,29 @@
   </aside>
 
   <script>
+    // Query Params
     var sp = new URLSearchParams(location.search);
+
+    // Expose config to script.js
     window.CHATBOT_WIDGET_KEY = sp.get("widget_key") || "";
     window.CHATBOT_API_BASE = sp.get("api_base") || "";
-  </script>
 
-  <script src="./script.js" defer></script>
+    // Cache bust (kommt aus widget.js als cb=v6)
+    var cb = sp.get("cb") || "";
+
+    // Cache-bust CSS
+    try {
+      var css = document.getElementById("cw-style");
+      if (css && cb) css.href = "./style.css?cb=" + encodeURIComponent(cb);
+    } catch (_) {}
+
+    // Cache-bust JS (wichtig, sonst hängt der Browser oft an alter script.js!)
+    (function loadScript() {
+      var s = document.createElement("script");
+      s.src = "./script.js" + (cb ? ("?cb=" + encodeURIComponent(cb)) : "");
+      s.defer = true;
+      document.body.appendChild(s);
+    })();
+  </script>
 </body>
 </html>

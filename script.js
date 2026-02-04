@@ -554,7 +554,23 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    return data.widget_settings || data.settings || null;
+    // 1) Base settings (wie bisher)
+    const ws = data.widget_settings || data.settings || {};
+
+    // 2) privacy_url kann je nach Backend-Shape woanders liegen
+    const privacyCandidate =
+      (ws && (ws.privacy_url || ws.privacyUrl || ws.privacy_policy_url || ws.privacyPolicyUrl)) ||
+      data.privacy_url ||
+      data.privacyUrl ||
+      (data.customer && (data.customer.privacy_url || data.customer.privacyUrl)) ||
+      null;
+
+    // 3) merged settings zurückgeben
+    return {
+      ...(ws && typeof ws === "object" ? ws : {}),
+      // wir setzen immer privacy_url als canonical key
+      ...(privacyCandidate ? { privacy_url: privacyCandidate } : {}),
+    };
   } catch (_) {
     return null;
   }
