@@ -7,7 +7,7 @@ const launcherBtn = document.getElementById("cw-launcher");
 const chatWindow = document.getElementById("cw-window");
 const closeBtn = document.getElementById("cw-close");
 
-const bodyEl = document.getElementById("cw-body");
+let bodyEl = document.getElementById("cw-body"); // kann beim Start noch null sein
 const formEl = document.getElementById("cw-form");
 const inputEl = document.getElementById("cw-input");
 const sendBtn = document.getElementById("cw-send");
@@ -47,10 +47,8 @@ const widgetState = {
     text_color_mode: "auto",
     avatar_url: null,
 
-    // Legal links (privacy only wird genutzt)
+    // Legal (privacy only)
     privacy_url: null,
-    imprint_url: null,
-    terms_url: null,
   },
   configLoaded: false,
 };
@@ -67,15 +65,28 @@ function isHttpUrlStr(u) {
   }
 }
 
+// Wenn bodyEl noch nicht da ist, merken wir uns, dass wir später einfügen müssen
+let legalHintPending = false;
+
+function getBodyEl() {
+  if (bodyEl) return bodyEl;
+  bodyEl = document.getElementById("cw-body");
+  return bodyEl;
+}
+
 function ensureLegalHint() {
-  if (!bodyEl) return;
+  const b = getBodyEl();
+  if (!b) {
+    legalHintPending = true;
+    return;
+  }
 
   let el = document.getElementById("cw-legal-hint");
   if (!el) {
     el = document.createElement("div");
     el.id = "cw-legal-hint";
     el.className = "cw-legal-hint";
-    bodyEl.insertBefore(el, bodyEl.firstChild);
+    b.insertBefore(el, b.firstChild);
   }
 
   const privacy = String(widgetState?.settings?.privacy_url || "").trim();
@@ -91,8 +102,17 @@ function ensureLegalHint() {
   el.innerHTML = `${line1}<br>${line2}`;
 }
 
+// Falls ensureLegalHint zu früh kam (bodyEl noch null), fügen wir es nach DOM-Ready sicher ein
+function flushPendingLegalHint() {
+  if (!legalHintPending) return;
+  const b = getBodyEl();
+  if (!b) return;
+  legalHintPending = false;
+  ensureLegalHint();
+}
+
 // ----------------------------------------------------------
-// MOBILE / KEYBOARD VAR (nur --cw-kb, minimal, ohne Fullscreen-Layout)
+// MOBILE / KEYBOARD VAR
 // ----------------------------------------------------------
 const root = document.documentElement;
 
@@ -118,26 +138,20 @@ function isMobileModalTarget() {
 function updateKeyboardVar() {
   const vv = window.visualViewport;
   let kb = 0;
-
-  if (vv) {
-    kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-  }
-
+  if (vv) kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
 }
 
 (function initKeyboardVar() {
   updateKeyboardVar();
-
   const vv = window.visualViewport;
   if (vv) vv.addEventListener("resize", updateKeyboardVar, { passive: true });
-
   window.addEventListener("resize", updateKeyboardVar, { passive: true });
   window.addEventListener("orientationchange", () => setTimeout(updateKeyboardVar, 80));
 })();
 
 // ----------------------------------------------------------
-// MODAL MODE (Mobile): Backdrop + Website "tot"
+// MODAL MODE
 // ----------------------------------------------------------
 function notifyParentModal(open) {
   try {
@@ -173,7 +187,7 @@ backdropEl?.addEventListener("click", () => {
 });
 
 // ----------------------------------------------------------
-// READY-GATING (gegen Flash)
+// READY-GATING
 // ----------------------------------------------------------
 const READY_FALLBACK_MS = 1200;
 let readyTimer = null;
@@ -186,7 +200,6 @@ function forceInitialHiddenState() {
   if (launcherWrap) launcherWrap.classList.remove("cw-ready");
   if (greetingEl) greetingEl.style.display = "none";
 }
-
 forceInitialHiddenState();
 
 // ----------------------------------------------------------
@@ -202,20 +215,15 @@ function scheduleGreetingAutoHide() {
   }, 8000);
 }
 
-// HILFSFUNKTIONEN -------------------------------------------------
+// ----------------------------------------------------------
+// THEME HELPERS
+// ----------------------------------------------------------
 function normalizeHexColor(c) {
   const s = String(c || "").trim();
   if (!s) return null;
   if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
   if (/^#[0-9a-fA-F]{3}$/.test(s)) {
-    return (
-      "#" +
-      s
-        .slice(1)
-        .split("")
-        .map((ch) => ch + ch)
-        .join("")
-    );
+    return "#" + s.slice(1).split("").map((ch) => ch + ch).join("");
   }
   return null;
 }
@@ -241,10 +249,8 @@ function luminance({ r, g, b }) {
 function pickTextColorMode(headerHex, mode) {
   const m = String(mode || "auto").toLowerCase();
   if (m === "light" || m === "dark") return m;
-
   const rgb = hexToRgb(headerHex);
   if (!rgb) return "dark";
-
   return luminance(rgb) < 0.42 ? "light" : "dark";
 }
 
@@ -344,7 +350,7 @@ function applyHeaderAvatar(url) {
 }
 
 // ----------------------------------------------------------
-// Settings normalize/merge
+// SETTINGS NORMALIZATION + MERGE
 // ----------------------------------------------------------
 function normalizeIncomingSettings(incoming) {
   if (!incoming || typeof incoming !== "object") return null;
@@ -357,24 +363,23 @@ function normalizeIncomingSettings(incoming) {
     return undefined;
   };
 
-  const pick = (keys) => pickFrom(incoming, keys);
-  const legal = incoming && typeof incoming.legal === "object" ? incoming.legal : null;
+  const ws = incoming;
+  const legal = (ws && typeof ws.legal === "object") ? ws.legal : null;
 
   const privacy =
-    pick(["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
-    pickFrom(legal, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]);
+    pickFrom(ws, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
+    pickFrom(legal, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
+    undefined;
 
   return {
-    bot_name: pick(["bot_name", "botName", "name", "bot_name_display"]),
-    user_label: pick(["user_label", "userLabel"]),
-    greeting_text: pick(["greeting_text", "launcherText", "launcher_text", "greetingText"]),
-    first_message: pick(["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
-    header_color: pick(["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
-    accent_color: pick(["accent_color", "accent", "widget_accent", "widget_accent_color"]),
-    text_color_mode: pick(["text_color_mode", "textColorMode"]),
-    avatar_url: pick(["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
-
-    // privacy only
+    bot_name: pickFrom(ws, ["bot_name", "botName", "name", "bot_name_display"]),
+    user_label: pickFrom(ws, ["user_label", "userLabel"]),
+    greeting_text: pickFrom(ws, ["greeting_text", "launcherText", "launcher_text", "greetingText"]),
+    first_message: pickFrom(ws, ["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
+    header_color: pickFrom(ws, ["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
+    accent_color: pickFrom(ws, ["accent_color", "accent", "widget_accent", "widget_accent_color"]),
+    text_color_mode: pickFrom(ws, ["text_color_mode", "textColorMode"]),
+    avatar_url: pickFrom(ws, ["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
     privacy_url: privacy,
   };
 }
@@ -401,7 +406,9 @@ function mergeSettings(base, incoming) {
   return out;
 }
 
-// Baut eine Chat-Zeile (User oder Bot)
+// ----------------------------------------------------------
+// CHAT UI HELPERS
+// ----------------------------------------------------------
 function createMessageRow({ sender, text }) {
   const row = document.createElement("div");
   row.className = "cw-row";
@@ -436,9 +443,11 @@ function createMessageRow({ sender, text }) {
 }
 
 function appendMessage(sender, text) {
+  const b = getBodyEl();
+  if (!b) return;
   const row = createMessageRow({ sender, text });
-  bodyEl.appendChild(row);
-  bodyEl.scrollTop = bodyEl.scrollHeight;
+  b.appendChild(row);
+  b.scrollTop = b.scrollHeight;
 }
 
 // ----------------------------------------------------------
@@ -447,6 +456,8 @@ function appendMessage(sender, text) {
 let typingEl = null;
 
 function showTypingIndicator() {
+  const b = getBodyEl();
+  if (!b) return;
   if (typingEl) return;
 
   const row = document.createElement("div");
@@ -483,8 +494,8 @@ function showTypingIndicator() {
   row.appendChild(bubble);
 
   typingEl = row;
-  bodyEl.appendChild(row);
-  bodyEl.scrollTop = bodyEl.scrollHeight;
+  b.appendChild(row);
+  b.scrollTop = b.scrollHeight;
 }
 
 function hideTypingIndicator() {
@@ -510,9 +521,7 @@ async function fetchBotReply(userText) {
       if (res.status === 401) return "Auth-Fehler – Widget-Key prüfen.";
       if (res.status === 429) {
         let errData = null;
-        try {
-          errData = await res.json();
-        } catch (_) {}
+        try { errData = await res.json(); } catch (_) {}
         return errData?.message || "Zu viele Anfragen. Bitte kurz warten und dann erneut versuchen.";
       }
 
@@ -553,21 +562,19 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    // Base settings (wie bisher)
+    // widgets settings
     const ws = data.widget_settings || data.settings || {};
-    const wsLegal = ws && typeof ws.legal === "object" ? ws.legal : null;
+    const wsLegal = (ws && typeof ws.legal === "object") ? ws.legal : null;
+    const customer = (data && typeof data.customer === "object") ? data.customer : null;
 
-    // privacy_url kann je nach Backend-Shape woanders liegen
     const privacyCandidate =
       (ws && (ws.privacy_url || ws.privacyUrl || ws.privacy_policy_url || ws.privacyPolicyUrl)) ||
-      (wsLegal &&
-        (wsLegal.privacy_url || wsLegal.privacyUrl || wsLegal.privacy_policy_url || wsLegal.privacyPolicyUrl)) ||
+      (wsLegal && (wsLegal.privacy_url || wsLegal.privacyUrl || wsLegal.privacy_policy_url || wsLegal.privacyPolicyUrl)) ||
       data.privacy_url ||
       data.privacyUrl ||
-      (data.customer && (data.customer.privacy_url || data.customer.privacyUrl)) ||
+      (customer && (customer.privacy_url || customer.privacyUrl)) ||
       null;
 
-    // merged settings zurückgeben
     return {
       ...(ws && typeof ws === "object" ? ws : {}),
       ...(privacyCandidate ? { privacy_url: privacyCandidate } : {}),
@@ -601,7 +608,6 @@ function applyWidgetSettings(settings) {
   applyHeaderAvatar(widgetState.settings.avatar_url);
   applyThemeColors(widgetState.settings);
 
-  // Legal hint immer aktualisieren
   ensureLegalHint();
 }
 
@@ -653,10 +659,8 @@ formEl?.addEventListener("submit", async (e) => {
   }
 
   appendMessage("user", userText);
-
   inputEl.value = "";
 
-  // Keyboard schließen beim Senden
   const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   if (isCoarse) inputEl.blur();
   else inputEl.focus();
@@ -675,7 +679,8 @@ formEl?.addEventListener("submit", async (e) => {
   appendMessage("bot", replyText);
 
   setTimeout(() => {
-    if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
+    const b = getBodyEl();
+    if (b) b.scrollTop = b.scrollHeight;
     updateKeyboardVar();
   }, 0);
 });
@@ -684,7 +689,14 @@ formEl?.addEventListener("submit", async (e) => {
 // INIT
 // ----------------------------------------------------------
 (async function initWidget() {
-  // Legal-Hinweis immer sofort einfügen (auch vor Config)
+  // Falls cw-body noch nicht ready ist: nach DOMContentLoaded nochmal versuchen
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", flushPendingLegalHint, { once: true });
+  } else {
+    flushPendingLegalHint();
+  }
+
+  // Versuch: sofort (wenn body existiert)
   ensureLegalHint();
 
   if (!WIDGET_KEY) {
@@ -701,7 +713,7 @@ formEl?.addEventListener("submit", async (e) => {
   } else {
     applyHeaderAvatar(null);
     if (greetingEl) greetingEl.style.display = "none";
-    ensureLegalHint();
+    ensureLegalHint(); // bleibt ohne Link
   }
 
   widgetState.configLoaded = true;
