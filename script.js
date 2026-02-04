@@ -1,8 +1,3 @@
-// -------------------------------------------------------------
-// Chat Widget – script.js (Version: 2026-02-04 v1)
-// -------------------------------------------------------------
-console.log("[CW] script.js loaded – v1");
-
 // ELEMENTE REFERENZIEREN -----------------------------------------
 const launcherWrap = document.getElementById("cw-launcher-wrap");
 const greetingEl = document.getElementById("cw-greeting");
@@ -12,7 +7,7 @@ const launcherBtn = document.getElementById("cw-launcher");
 const chatWindow = document.getElementById("cw-window");
 const closeBtn = document.getElementById("cw-close");
 
-const bodyEl = document.getElementById("cw-body");
+let bodyEl = document.getElementById("cw-body"); // kann beim Start noch null sein
 const formEl = document.getElementById("cw-form");
 const inputEl = document.getElementById("cw-input");
 const sendBtn = document.getElementById("cw-send");
@@ -29,7 +24,7 @@ const API_BASE =
   (window.CHATBOT_CONFIG && window.CHATBOT_CONFIG.apiBase) ||
   "http://localhost:5051";
 
-const API_BASE_CLEAN = String(API_BASE || "").replace(/\/+$/, "");
+const API_BASE_CLEAN = API_BASE.replace(/\/+$/, "");
 const ASK_URL = API_BASE_CLEAN.endsWith("/ask") ? API_BASE_CLEAN : `${API_BASE_CLEAN}/ask`;
 const CONFIG_URL = `${API_BASE_CLEAN}/widget/config`;
 
@@ -52,10 +47,8 @@ const widgetState = {
     text_color_mode: "auto",
     avatar_url: null,
 
-    // Legal
+    // Legal (privacy only)
     privacy_url: null,
-    imprint_url: null,
-    terms_url: null,
   },
   configLoaded: false,
 };
@@ -72,15 +65,28 @@ function isHttpUrlStr(u) {
   }
 }
 
+// Wenn bodyEl noch nicht da ist, merken wir uns, dass wir später einfügen müssen
+let legalHintPending = false;
+
+function getBodyEl() {
+  if (bodyEl) return bodyEl;
+  bodyEl = document.getElementById("cw-body");
+  return bodyEl;
+}
+
 function ensureLegalHint() {
-  if (!bodyEl) return;
+  const b = getBodyEl();
+  if (!b) {
+    legalHintPending = true;
+    return;
+  }
 
   let el = document.getElementById("cw-legal-hint");
   if (!el) {
     el = document.createElement("div");
     el.id = "cw-legal-hint";
     el.className = "cw-legal-hint";
-    bodyEl.insertBefore(el, bodyEl.firstChild);
+    b.insertBefore(el, b.firstChild);
   }
 
   const privacy = String(widgetState?.settings?.privacy_url || "").trim();
@@ -94,6 +100,15 @@ function ensureLegalHint() {
     : "Weitere Informationen findest du in unserer Datenschutzerklärung.";
 
   el.innerHTML = `${line1}<br>${line2}`;
+}
+
+// Falls ensureLegalHint zu früh kam (bodyEl noch null), fügen wir es nach DOM-Ready sicher ein
+function flushPendingLegalHint() {
+  if (!legalHintPending) return;
+  const b = getBodyEl();
+  if (!b) return;
+  legalHintPending = false;
+  ensureLegalHint();
 }
 
 // ----------------------------------------------------------
@@ -123,26 +138,20 @@ function isMobileModalTarget() {
 function updateKeyboardVar() {
   const vv = window.visualViewport;
   let kb = 0;
-
-  if (vv) {
-    kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-  }
-
+  if (vv) kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
 }
 
 (function initKeyboardVar() {
   updateKeyboardVar();
-
   const vv = window.visualViewport;
   if (vv) vv.addEventListener("resize", updateKeyboardVar, { passive: true });
-
   window.addEventListener("resize", updateKeyboardVar, { passive: true });
   window.addEventListener("orientationchange", () => setTimeout(updateKeyboardVar, 80));
 })();
 
 // ----------------------------------------------------------
-// MODAL MODE (Mobile): Backdrop + Website "tot"
+// MODAL MODE
 // ----------------------------------------------------------
 function notifyParentModal(open) {
   try {
@@ -178,7 +187,7 @@ backdropEl?.addEventListener("click", () => {
 });
 
 // ----------------------------------------------------------
-// READY-GATING (gegen Flash)
+// READY-GATING
 // ----------------------------------------------------------
 const READY_FALLBACK_MS = 1200;
 let readyTimer = null;
@@ -191,7 +200,6 @@ function forceInitialHiddenState() {
   if (launcherWrap) launcherWrap.classList.remove("cw-ready");
   if (greetingEl) greetingEl.style.display = "none";
 }
-
 forceInitialHiddenState();
 
 // ----------------------------------------------------------
@@ -207,20 +215,15 @@ function scheduleGreetingAutoHide() {
   }, 8000);
 }
 
-// HILFSFUNKTIONEN -------------------------------------------------
+// ----------------------------------------------------------
+// THEME HELPERS
+// ----------------------------------------------------------
 function normalizeHexColor(c) {
   const s = String(c || "").trim();
   if (!s) return null;
   if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
   if (/^#[0-9a-fA-F]{3}$/.test(s)) {
-    return (
-      "#" +
-      s
-        .slice(1)
-        .split("")
-        .map((ch) => ch + ch)
-        .join("")
-    );
+    return "#" + s.slice(1).split("").map((ch) => ch + ch).join("");
   }
   return null;
 }
@@ -246,10 +249,8 @@ function luminance({ r, g, b }) {
 function pickTextColorMode(headerHex, mode) {
   const m = String(mode || "auto").toLowerCase();
   if (m === "light" || m === "dark") return m;
-
   const rgb = hexToRgb(headerHex);
   if (!rgb) return "dark";
-
   return luminance(rgb) < 0.42 ? "light" : "dark";
 }
 
@@ -349,15 +350,12 @@ function applyHeaderAvatar(url) {
 }
 
 // ----------------------------------------------------------
-// Settings normalisieren/mergen (inkl. legal.privacy_url)
+// SETTINGS NORMALIZATION + MERGE
 // ----------------------------------------------------------
 function normalizeIncomingSettings(incoming) {
   if (!incoming || typeof incoming !== "object") return null;
 
-  const obj = incoming;
-  const legal = obj && typeof obj.legal === "object" ? obj.legal : null;
-
-  const pick = (source, keys) => {
+  const pickFrom = (source, keys) => {
     if (!source || typeof source !== "object") return undefined;
     for (const k of keys) {
       if (typeof source[k] !== "undefined" && source[k] !== null) return source[k];
@@ -365,19 +363,24 @@ function normalizeIncomingSettings(incoming) {
     return undefined;
   };
 
-  const privacyFromTop = pick(obj, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]);
-  const privacyFromLegal = pick(legal, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]);
+  const ws = incoming;
+  const legal = (ws && typeof ws.legal === "object") ? ws.legal : null;
+
+  const privacy =
+    pickFrom(ws, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
+    pickFrom(legal, ["privacy_url", "privacyUrl", "privacy_policy_url", "privacyPolicyUrl"]) ??
+    undefined;
 
   return {
-    bot_name: pick(obj, ["bot_name", "botName", "name", "bot_name_display"]),
-    user_label: pick(obj, ["user_label", "userLabel"]),
-    greeting_text: pick(obj, ["greeting_text", "launcherText", "launcher_text", "greetingText"]),
-    first_message: pick(obj, ["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
-    header_color: pick(obj, ["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
-    accent_color: pick(obj, ["accent_color", "accent", "widget_accent", "widget_accent_color"]),
-    text_color_mode: pick(obj, ["text_color_mode", "textColorMode"]),
-    avatar_url: pick(obj, ["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
-    privacy_url: privacyFromTop ?? privacyFromLegal ?? undefined,
+    bot_name: pickFrom(ws, ["bot_name", "botName", "name", "bot_name_display"]),
+    user_label: pickFrom(ws, ["user_label", "userLabel"]),
+    greeting_text: pickFrom(ws, ["greeting_text", "launcherText", "launcher_text", "greetingText"]),
+    first_message: pickFrom(ws, ["first_message", "botGreeting", "bot_greeting", "firstMessage"]),
+    header_color: pickFrom(ws, ["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
+    accent_color: pickFrom(ws, ["accent_color", "accent", "widget_accent", "widget_accent_color"]),
+    text_color_mode: pickFrom(ws, ["text_color_mode", "textColorMode"]),
+    avatar_url: pickFrom(ws, ["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
+    privacy_url: privacy,
   };
 }
 
@@ -404,7 +407,7 @@ function mergeSettings(base, incoming) {
 }
 
 // ----------------------------------------------------------
-// Chat messages
+// CHAT UI HELPERS
 // ----------------------------------------------------------
 function createMessageRow({ sender, text }) {
   const row = document.createElement("div");
@@ -440,9 +443,11 @@ function createMessageRow({ sender, text }) {
 }
 
 function appendMessage(sender, text) {
+  const b = getBodyEl();
+  if (!b) return;
   const row = createMessageRow({ sender, text });
-  bodyEl.appendChild(row);
-  bodyEl.scrollTop = bodyEl.scrollHeight;
+  b.appendChild(row);
+  b.scrollTop = b.scrollHeight;
 }
 
 // ----------------------------------------------------------
@@ -451,6 +456,8 @@ function appendMessage(sender, text) {
 let typingEl = null;
 
 function showTypingIndicator() {
+  const b = getBodyEl();
+  if (!b) return;
   if (typingEl) return;
 
   const row = document.createElement("div");
@@ -487,8 +494,8 @@ function showTypingIndicator() {
   row.appendChild(bubble);
 
   typingEl = row;
-  bodyEl.appendChild(row);
-  bodyEl.scrollTop = bodyEl.scrollHeight;
+  b.appendChild(row);
+  b.scrollTop = b.scrollHeight;
 }
 
 function hideTypingIndicator() {
@@ -497,7 +504,7 @@ function hideTypingIndicator() {
 }
 
 // ----------------------------------------------------------
-// BACKEND CALL – /ask
+// BACKEND CALL – /ask mit widget_key
 // ----------------------------------------------------------
 async function fetchBotReply(userText) {
   try {
@@ -537,7 +544,7 @@ async function fetchBotReply(userText) {
 }
 
 // ----------------------------------------------------------
-// Widget Config laden
+// Widget Config laden + anwenden
 // ----------------------------------------------------------
 async function fetchWidgetConfig() {
   if (!WIDGET_KEY) return null;
@@ -555,9 +562,23 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    // Backend-Shape: data.settings oder data.widget_settings
+    // widgets settings
     const ws = data.widget_settings || data.settings || {};
-    return ws && typeof ws === "object" ? ws : null;
+    const wsLegal = (ws && typeof ws.legal === "object") ? ws.legal : null;
+    const customer = (data && typeof data.customer === "object") ? data.customer : null;
+
+    const privacyCandidate =
+      (ws && (ws.privacy_url || ws.privacyUrl || ws.privacy_policy_url || ws.privacyPolicyUrl)) ||
+      (wsLegal && (wsLegal.privacy_url || wsLegal.privacyUrl || wsLegal.privacy_policy_url || wsLegal.privacyPolicyUrl)) ||
+      data.privacy_url ||
+      data.privacyUrl ||
+      (customer && (customer.privacy_url || customer.privacyUrl)) ||
+      null;
+
+    return {
+      ...(ws && typeof ws === "object" ? ws : {}),
+      ...(privacyCandidate ? { privacy_url: privacyCandidate } : {}),
+    };
   } catch (_) {
     return null;
   }
@@ -658,7 +679,8 @@ formEl?.addEventListener("submit", async (e) => {
   appendMessage("bot", replyText);
 
   setTimeout(() => {
-    if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
+    const b = getBodyEl();
+    if (b) b.scrollTop = b.scrollHeight;
     updateKeyboardVar();
   }, 0);
 });
@@ -667,6 +689,14 @@ formEl?.addEventListener("submit", async (e) => {
 // INIT
 // ----------------------------------------------------------
 (async function initWidget() {
+  // Falls cw-body noch nicht ready ist: nach DOMContentLoaded nochmal versuchen
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", flushPendingLegalHint, { once: true });
+  } else {
+    flushPendingLegalHint();
+  }
+
+  // Versuch: sofort (wenn body existiert)
   ensureLegalHint();
 
   if (!WIDGET_KEY) {
@@ -683,7 +713,7 @@ formEl?.addEventListener("submit", async (e) => {
   } else {
     applyHeaderAvatar(null);
     if (greetingEl) greetingEl.style.display = "none";
-    ensureLegalHint();
+    ensureLegalHint(); // bleibt ohne Link
   }
 
   widgetState.configLoaded = true;
@@ -695,7 +725,4 @@ formEl?.addEventListener("submit", async (e) => {
   appendMessage("bot", first);
 
   updateKeyboardVar();
-
-  // Debug: zeigt dir sofort, ob privacy_url erkannt wurde
-  console.log("[CW] privacy_url:", widgetState.settings.privacy_url);
 })();
