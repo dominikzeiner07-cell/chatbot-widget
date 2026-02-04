@@ -485,12 +485,18 @@ body {
   background: transparent;
 }
 
+/* Standard-Links im Hinweis (falls du später noch mehr Links einbaust) */
 .cw-legal-hint a {
   color: rgba(0, 0, 0, 0.55);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.cw-legal-hint a:hover {
-  color: rgba(0, 0, 0, 0.85);
+/* Der echte Privacy-Link soll blau sein (nur das Wort "Datenschutzerklärung") */
+.cw-legal-hint .cw-legal-link {
+  color: #2563eb;
+}
+
+.cw-legal-hint .cw-legal-link:hover {
+  color: #1d4ed8;
 }

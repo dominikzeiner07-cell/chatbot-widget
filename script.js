@@ -86,10 +86,9 @@ function ensureLegalHint() {
   const line1 = `Um deine Anfrage zu bearbeiten und unseren Service zu verbessern, verarbeiten wir Daten im Rahmen dieses Chats.`;
 
   // Link nur wenn URL valide, sonst Plain-Text
-  const line2 = hasLink
-    ? `Weitere Informationen findest du in unserer <a href="${privacy}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
-    : `Weitere Informationen findest du in unserer Datenschutzerklärung.`;
-
+ const line2 = hasLink
+ ? `Weitere Informationen findest du in unserer <a class="cw-legal-link" href="${privacy}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
+  : `Weitere Informationen findest du in unserer Datenschutzerklärung.`;
   el.innerHTML = `${line1}<br>${line2}`;
 }
 
