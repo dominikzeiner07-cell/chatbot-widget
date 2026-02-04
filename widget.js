@@ -35,7 +35,7 @@
   var BASE_W = 480;
   var BASE_H = 860;
 
-  var CACHE_BUST = "v7";
+  var CACHE_BUST = "v8";
   var src =
     base +
     "/embed.html" +
