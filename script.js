@@ -562,14 +562,20 @@ async function fetchWidgetConfig() {
     const data = await res.json();
     if (!data || data.ok !== true) return null;
 
-    // widgets settings
+    // widget settings
     const ws = data.widget_settings || data.settings || {};
     const wsLegal = (ws && typeof ws.legal === "object") ? ws.legal : null;
+    const legalTop = (data && typeof data.legal === "object") ? data.legal : null; // <--- NEU
     const customer = (data && typeof data.customer === "object") ? data.customer : null;
 
     const privacyCandidate =
+      // 1) direkt in settings
       (ws && (ws.privacy_url || ws.privacyUrl || ws.privacy_policy_url || ws.privacyPolicyUrl)) ||
+      // 2) settings.legal
       (wsLegal && (wsLegal.privacy_url || wsLegal.privacyUrl || wsLegal.privacy_policy_url || wsLegal.privacyPolicyUrl)) ||
+      // 3) top-level legal (so liefert es dein Backend gerade)
+      (legalTop && (legalTop.privacy_url || legalTop.privacyUrl || legalTop.privacy_policy_url || legalTop.privacyPolicyUrl)) ||
+      // 4) alternative Shapes
       data.privacy_url ||
       data.privacyUrl ||
       (customer && (customer.privacy_url || customer.privacyUrl)) ||
