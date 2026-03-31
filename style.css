@@ -9,13 +9,53 @@
 
 :root {
   --cw-kb: 0px; /* wird per JS gesetzt (Keyboard-Höhe) */
+
+  --cw-bg: #ffffff;
+  --cw-surface: #ffffff;
+  --cw-surface-2: #f7f7f8;
+  --cw-text: #000000;
+  --cw-text-soft: rgba(0, 0, 0, 0.55);
+  --cw-border: #000000;
+  --cw-border-soft: rgba(0, 0, 0, 0.08);
+  --cw-input-placeholder: #777777;
+  --cw-user-bubble-bg: #ffffff;
+  --cw-user-bubble-text: #000000;
+  --cw-bot-bubble-bg: #ffffff;
+  --cw-bot-bubble-text: #000000;
+  --cw-avatar-bot-bg: #000000;
+  --cw-avatar-bot-text: #ffffff;
+  --cw-avatar-user-bg: #dcdcdc;
+  --cw-avatar-user-text: #000000;
+  --cw-scrollbar: rgba(0, 0, 0, 0.4);
+  --cw-typing-dot: #000000;
+}
+
+.cw-window[data-cw-theme="dark"] {
+  --cw-bg: #0f172a;
+  --cw-surface: #111827;
+  --cw-surface-2: #1f2937;
+  --cw-text: #f9fafb;
+  --cw-text-soft: rgba(255, 255, 255, 0.72);
+  --cw-border: rgba(255, 255, 255, 0.18);
+  --cw-border-soft: rgba(255, 255, 255, 0.12);
+  --cw-input-placeholder: rgba(255, 255, 255, 0.5);
+  --cw-user-bubble-bg: #1e293b;
+  --cw-user-bubble-text: #f9fafb;
+  --cw-bot-bubble-bg: #111827;
+  --cw-bot-bubble-text: #f9fafb;
+  --cw-avatar-bot-bg: #334155;
+  --cw-avatar-bot-text: #ffffff;
+  --cw-avatar-user-bg: #374151;
+  --cw-avatar-user-text: #f9fafb;
+  --cw-scrollbar: rgba(255, 255, 255, 0.28);
+  --cw-typing-dot: #f9fafb;
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text",
     Roboto, Helvetica, Arial, sans-serif;
-  background-color: #fff;
-  color: #000;
+  background-color: var(--cw-bg);
+  color: var(--cw-text);
   min-height: 100vh;
 }
 
@@ -63,15 +103,15 @@ body {
 }
 
 .cw-greeting {
-  background-color: #fff;
-  color: #000;
+  background-color: var(--cw-surface);
+  color: var(--cw-text);
   border-radius: 12px;
   padding: 10px 14px;
   font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--cw-border-soft);
   display: none;
   align-items: center;
   gap: 10px;
@@ -84,10 +124,11 @@ body {
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
-  color: #000;
+  color: var(--cw-text);
   opacity: 0.6;
   font-weight: 500;
 }
+
 .cw-greeting-close:hover {
   opacity: 1;
 }
@@ -128,15 +169,15 @@ body {
   height: 640px;
   max-height: calc(100vh - 32px);
 
-  background-color: #fff;
-  color: #000;
+  background-color: var(--cw-surface);
+  color: var(--cw-text);
 
   display: flex;
   flex-direction: column;
 
   border-radius: 16px;
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.35), 0 8px 20px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--cw-border-soft);
 
   overflow: hidden;
   z-index: 9998;
@@ -170,8 +211,8 @@ body {
 }
 
 .cw-header-avatar {
-  background-color: #fff;
-  color: #000;
+  background-color: var(--cw-surface);
+  color: var(--cw-text);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -180,7 +221,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #000;
+  border: 2px solid rgba(255, 255, 255, 0.18);
   overflow: hidden;
 }
 
@@ -239,7 +280,7 @@ body {
 /* BODY / MESSAGE LIST ------------------------------------------- */
 .cw-body {
   flex: 1;
-  background-color: #fff;
+  background-color: var(--cw-surface);
   padding: 16px;
   overflow-y: auto;
   display: flex;
@@ -263,30 +304,30 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #000;
-  color: #fff;
+  background-color: var(--cw-avatar-bot-bg);
+  color: var(--cw-avatar-bot-text);
   font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #000;
+  border: 2px solid var(--cw-avatar-bot-bg);
 }
 
 .cw-avatar-user {
-  background-color: #dcdcdc;
-  color: #000;
-  border-color: #dcdcdc;
+  background-color: var(--cw-avatar-user-bg);
+  color: var(--cw-avatar-user-text);
+  border-color: var(--cw-avatar-user-bg);
 }
 
 .cw-msg {
-  border: 1px solid #000;
+  border: 1px solid var(--cw-border);
   border-radius: 8px;
   padding: 10px 12px;
   line-height: 1.4;
   font-size: 14px;
-  background-color: #fff;
-  color: #000;
+  background-color: var(--cw-bot-bubble-bg);
+  color: var(--cw-bot-bubble-text);
   max-width: 75%;
   word-break: break-word;
   white-space: pre-line;
@@ -307,21 +348,21 @@ body {
 .cw-row-user .cw-msg {
   order: 1;
   text-align: left;
-  background-color: #fff;
-  color: #000;
-  border: 1px solid #000;
+  background-color: var(--cw-user-bubble-bg);
+  color: var(--cw-user-bubble-text);
+  border: 1px solid var(--cw-border);
   max-width: 75%;
   align-self: flex-end;
 }
 
 /* Composer / Input --------------------------------------------- */
 .cw-composer {
-  border-top: 1px solid #000;
+  border-top: 1px solid var(--cw-border);
   display: flex;
   align-items: center;
   padding: 8px;
   gap: 8px;
-  background-color: #fff;
+  background-color: var(--cw-surface);
   flex-shrink: 0;
 }
 
@@ -331,12 +372,12 @@ body {
   line-height: 1.4;
   padding: 10px 12px;
   border-radius: 4px;
-  border: 1px solid #000;
-  background-color: #fff;
-  color: #000;
+  border: 1px solid var(--cw-border);
+  background-color: var(--cw-surface-2);
+  color: var(--cw-text);
 }
 .cw-input::placeholder {
-  color: #777;
+  color: var(--cw-input-placeholder);
 }
 
 .cw-send {
@@ -371,7 +412,7 @@ body {
   background: transparent;
 }
 .cw-body::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--cw-scrollbar);
   border-radius: 999px;
 }
 
@@ -389,24 +430,24 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #000;
-  color: #fff;
+  background-color: var(--cw-avatar-bot-bg);
+  color: var(--cw-avatar-bot-text);
   font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #000;
+  border: 2px solid var(--cw-avatar-bot-bg);
 }
 
 .cw-typing-bubble {
-  border: 1px solid #000;
+  border: 1px solid var(--cw-border);
   border-radius: 8px;
   padding: 10px 12px;
   line-height: 1.4;
   font-size: 14px;
-  background-color: #fff;
-  color: #000;
+  background-color: var(--cw-bot-bubble-bg);
+  color: var(--cw-bot-bubble-text);
   max-width: 75%;
   display: inline-flex;
   align-items: center;
@@ -420,7 +461,7 @@ body {
 .cw-dot {
   width: 6px;
   height: 6px;
-  background-color: #000;
+  background-color: var(--cw-typing-dot);
   border-radius: 50%;
   animation: cw-bounce 1s infinite;
   opacity: 0.6;
@@ -474,7 +515,7 @@ body {
 .cw-legal-hint {
   font-size: 12px;
   line-height: 1.35;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--cw-text-soft);
 
   text-align: center;
   width: 100%;
@@ -487,7 +528,7 @@ body {
 
 /* Standard-Links im Hinweis (falls du später noch mehr Links einbaust) */
 .cw-legal-hint a {
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--cw-text-soft);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

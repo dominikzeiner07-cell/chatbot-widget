@@ -45,6 +45,7 @@ const widgetState = {
     header_color: null,
     accent_color: null,
     text_color_mode: "auto",
+    theme_mode: "light",
     avatar_url: null,
 
     // Legal (privacy only)
@@ -349,6 +350,20 @@ function applyHeaderAvatar(url) {
   if (headerAvatarFallback) headerAvatarFallback.style.display = "flex";
 }
 
+function applyWidgetThemeMode(themeMode) {
+  const mode = String(themeMode || "light").trim().toLowerCase() === "dark"
+    ? "dark"
+    : "light";
+
+  if (chatWindow) {
+    chatWindow.setAttribute("data-cw-theme", mode);
+  }
+
+  if (launcherWrap) {
+    launcherWrap.setAttribute("data-cw-theme", mode);
+  }
+}
+
 // ----------------------------------------------------------
 // SETTINGS NORMALIZATION + MERGE
 // ----------------------------------------------------------
@@ -379,6 +394,7 @@ function normalizeIncomingSettings(incoming) {
     header_color: pickFrom(ws, ["header_color", "headerBg", "header_bg", "widget_header_bg", "widget_header_color"]),
     accent_color: pickFrom(ws, ["accent_color", "accent", "widget_accent", "widget_accent_color"]),
     text_color_mode: pickFrom(ws, ["text_color_mode", "textColorMode"]),
+    theme_mode: pickFrom(ws, ["theme_mode", "themeMode"]),
     avatar_url: pickFrom(ws, ["avatar_url", "botAvatarUrl", "bot_avatar_url"]),
     privacy_url: privacy,
   };
@@ -396,6 +412,7 @@ function mergeSettings(base, incoming) {
     "header_color",
     "accent_color",
     "text_color_mode",
+    "theme_mode",
     "avatar_url",
     "privacy_url",
   ];
@@ -613,6 +630,7 @@ function applyWidgetSettings(settings) {
 
   applyHeaderAvatar(widgetState.settings.avatar_url);
   applyThemeColors(widgetState.settings);
+  applyWidgetThemeMode(widgetState.settings.theme_mode);
 
   ensureLegalHint();
 }
@@ -718,6 +736,7 @@ formEl?.addEventListener("submit", async (e) => {
     applyWidgetSettings(cfg);
   } else {
     applyHeaderAvatar(null);
+    applyWidgetThemeMode(widgetState.settings.theme_mode);
     if (greetingEl) greetingEl.style.display = "none";
     ensureLegalHint(); // bleibt ohne Link
   }
