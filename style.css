@@ -510,32 +510,38 @@ body {
 /* =============================================================== */
 @media (max-width: 480px), (max-height: 740px) {
   #cw-launcher-wrap {
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
   }
 
   .cw-window {
-    left: 12px;
-    right: 12px;
+    left: 8px;
+    right: 8px;
     width: auto;
 
-    bottom: calc(92px + env(safe-area-inset-bottom));
+    bottom: calc(84px + env(safe-area-inset-bottom));
 
-    /* widget-like Höhe */
-    height: min(70vh, 560px);
+    /* größer und breiter als bisher */
+    height: min(78vh, 640px);
 
     /* wenn Keyboard offen ist, drückt es die max-height runter */
-    max-height: calc(100dvh - 140px - env(safe-area-inset-bottom) - var(--cw-kb));
+    max-height: calc(100dvh - 110px - env(safe-area-inset-bottom) - var(--cw-kb));
 
-    border-radius: 14px;
+    border-radius: 16px;
   }
 
-  .cw-body { padding: 14px; }
+  .cw-body {
+    padding: 16px;
+  }
 
   /* verhindert iOS Auto-Zoom */
-  .cw-input { font-size: 16px; }
+  .cw-input {
+    font-size: 16px;
+  }
 
-  .cw-header { padding: 10px 14px; }
+  .cw-header {
+    padding: 12px 14px;
+  }
 }
 /* =============================================================== */
 /* LEGAL / PRIVACY HINWEIS (steht oben im Chat und scrollt weg)     */
