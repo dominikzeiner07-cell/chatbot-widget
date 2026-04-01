@@ -113,7 +113,7 @@ function flushPendingLegalHint() {
 }
 
 // ----------------------------------------------------------
-// MOBILE / KEYBOARD VAR
+// MOBILE / VIEWPORT / KEYBOARD VARS
 // ----------------------------------------------------------
 const root = document.documentElement;
 
@@ -136,19 +136,61 @@ function isMobileModalTarget() {
   return !!(coarse && small);
 }
 
-function updateKeyboardVar() {
+function getVisibleViewportHeight() {
+  const vv = window.visualViewport;
+
+  if (vv && Number.isFinite(vv.height) && vv.height > 0) {
+    return Math.round(vv.height);
+  }
+
+  if (Number.isFinite(window.innerHeight) && window.innerHeight > 0) {
+    return Math.round(window.innerHeight);
+  }
+
+  if (document.documentElement && Number.isFinite(document.documentElement.clientHeight)) {
+    return Math.round(document.documentElement.clientHeight);
+  }
+
+  return 0;
+}
+
+function updateViewportVars() {
+  const visibleHeight = getVisibleViewportHeight();
+
+  if (visibleHeight > 0) {
+    setCssVar("--cw-vh", `${visibleHeight}px`);
+  }
+
   const vv = window.visualViewport;
   let kb = 0;
-  if (vv) kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+
+  if (vv && Number.isFinite(vv.height)) {
+    kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+  }
+
   setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
 }
 
-(function initKeyboardVar() {
-  updateKeyboardVar();
+(function initViewportVars() {
+  updateViewportVars();
+
   const vv = window.visualViewport;
-  if (vv) vv.addEventListener("resize", updateKeyboardVar, { passive: true });
-  window.addEventListener("resize", updateKeyboardVar, { passive: true });
-  window.addEventListener("orientationchange", () => setTimeout(updateKeyboardVar, 80));
+
+  if (vv) {
+    vv.addEventListener("resize", updateViewportVars, { passive: true });
+    vv.addEventListener("scroll", updateViewportVars, { passive: true });
+  }
+
+  window.addEventListener("resize", updateViewportVars, { passive: true });
+  window.addEventListener("orientationchange", () => {
+    setTimeout(updateViewportVars, 80);
+    setTimeout(updateViewportVars, 220);
+    setTimeout(updateViewportVars, 420);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) updateViewportVars();
+  });
 })();
 
 // ----------------------------------------------------------
@@ -166,7 +208,7 @@ function setModalOpen(open) {
   notifyParentModal(open);
 
   if (!isMobileModalTarget()) {
-    updateKeyboardVar();
+    updateViewportVars();
     return;
   }
 
@@ -177,9 +219,9 @@ function setModalOpen(open) {
     else backdropEl.classList.add("cw-hidden");
   }
 
-  updateKeyboardVar();
-  requestAnimationFrame(updateKeyboardVar);
-  requestAnimationFrame(updateKeyboardVar);
+  updateViewportVars();
+  requestAnimationFrame(updateViewportVars);
+  requestAnimationFrame(updateViewportVars);
 }
 
 backdropEl?.addEventListener("click", () => {
@@ -690,7 +732,7 @@ formEl?.addEventListener("submit", async (e) => {
   else inputEl.focus();
 
   showTypingIndicator();
-  updateKeyboardVar();
+  updateViewportVars();
 
   let replyText;
   try {
@@ -705,7 +747,7 @@ formEl?.addEventListener("submit", async (e) => {
   setTimeout(() => {
     const b = getBodyEl();
     if (b) b.scrollTop = b.scrollHeight;
-    updateKeyboardVar();
+    updateViewportVars();
   }, 0);
 });
 
@@ -749,5 +791,5 @@ formEl?.addEventListener("submit", async (e) => {
   const first = String(widgetState.settings.first_message || "").trim() || "Hallo! Wie kann ich helfen?";
   appendMessage("bot", first);
 
-  updateKeyboardVar();
+  updateViewportVars();
 })();

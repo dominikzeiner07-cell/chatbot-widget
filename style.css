@@ -8,6 +8,7 @@
 }
 
 :root {
+  --cw-vh: 100vh;
   --cw-kb: 0px; /* wird per JS gesetzt (Keyboard-Höhe) */
 
   --cw-bg: #ffffff;
@@ -508,26 +509,40 @@ body {
 /* - Fenster bleibt "widget-like" (Rand/Shadow sichtbar)            */
 /* - Keyboard-Push nur als Max-Height (nicht full-screen)           */
 /* =============================================================== */
-@media (max-width: 480px), (max-height: 740px) {
+@media (max-width: 820px), (max-height: 900px) {
   #cw-launcher-wrap {
     right: 10px;
     bottom: calc(10px + env(safe-area-inset-bottom));
   }
 
   .cw-window {
-    left: 6px;
-    right: 6px;
+    left: 8px;
+    right: 8px;
     width: auto;
 
-    bottom: calc(82px + env(safe-area-inset-bottom));
+    top: 8px;
+    bottom: 8px;
 
-    /* letzter sinnvoller Schritt vor echtem Fullscreen */
-    height: min(82vh, 680px);
+    height: auto;
+    max-height: none;
+    min-height: 0;
 
-    /* mehr nutzbare Höhe, aber noch genug Luft für Browser/UI */
-    max-height: calc(100dvh - 90px - env(safe-area-inset-bottom) - var(--cw-kb));
+    border-radius: 18px;
+  }
 
-    border-radius: 16px;
+  .cw-modal-open .cw-window:not(.cw-hidden) {
+    top: max(8px, env(safe-area-inset-top));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    height: calc(
+      var(--cw-vh)
+      - max(8px, env(safe-area-inset-top))
+      - max(8px, env(safe-area-inset-bottom))
+    );
+    max-height: calc(
+      var(--cw-vh)
+      - max(8px, env(safe-area-inset-top))
+      - max(8px, env(safe-area-inset-bottom))
+    );
   }
 
   .cw-body {

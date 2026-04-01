@@ -65,6 +65,16 @@
     }
   }
 
+  function updateIframeViewportHeight(iframe) {
+  if (!iframe || !isMobile()) return;
+
+  var h = window.innerHeight || document.documentElement.clientHeight || 0;
+  if (!h) return;
+
+  iframe.style.height = h + "px";
+  iframe.style.maxHeight = h + "px";
+}
+
   // -------------------------------
   // SCROLL LOCK (Host Page)
   // -------------------------------
@@ -177,14 +187,16 @@
 
     function applySize() {
       if (isMobile()) {
-        // Mobile: iframe fullscreen (Modal-Overlay)
-        iframe.style.width = "100vw";
-        iframe.style.height = "100vh";
-        iframe.style.maxWidth = "100vw";
-        iframe.style.maxHeight = "100vh";
-        iframe.style.right = "0";
-        iframe.style.bottom = "0";
-      } else {
+  // Mobile: iframe immer ganze sichtbare Fläche
+  iframe.style.width = "100vw";
+  iframe.style.height = window.innerHeight + "px";
+  iframe.style.maxWidth = "100vw";
+  iframe.style.maxHeight = window.innerHeight + "px";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+
+  updateIframeViewportHeight(iframe);
+} else {
         // Desktop: wie vorher (Arbeitsfläche + PAD für Schatten)
         iframe.style.width = (BASE_W + PAD) + "px";
         iframe.style.height = (BASE_H + PAD) + "px";
@@ -201,10 +213,22 @@
     }
 
     applySize();
-    window.addEventListener("resize", applySize, { passive: true });
-    window.addEventListener("orientationchange", function () {
-      setTimeout(applySize, 80);
-    });
+window.addEventListener("resize", applySize, { passive: true });
+window.addEventListener("orientationchange", function () {
+  setTimeout(applySize, 80);
+  setTimeout(function () { updateIframeViewportHeight(iframe); }, 180);
+  setTimeout(function () { updateIframeViewportHeight(iframe); }, 350);
+});
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", function () {
+    updateIframeViewportHeight(iframe);
+  }, { passive: true });
+
+  window.visualViewport.addEventListener("scroll", function () {
+    updateIframeViewportHeight(iframe);
+  }, { passive: true });
+}
 
     document.body.appendChild(iframe);
   }
