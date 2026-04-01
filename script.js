@@ -136,6 +136,21 @@ function isMobileModalTarget() {
   return !!(coarse && small);
 }
 
+function isIosSafari() {
+  const ua = String(window.navigator.userAgent || "");
+  const isIphoneOrIpad = /iPhone|iPad|iPod/i.test(ua);
+  const isWebkit = /WebKit/i.test(ua);
+  const isCriOS = /CriOS/i.test(ua);
+  const isFxiOS = /FxiOS/i.test(ua);
+  const isEdgiOS = /EdgiOS/i.test(ua);
+  return isIphoneOrIpad && isWebkit && !isCriOS && !isFxiOS && !isEdgiOS;
+}
+
+function updateBrowserSpecificViewportVars() {
+  const safariInset = isIosSafari() ? 18 : 8;
+  setCssVar("--cw-mobile-safe-gap", `${safariInset}px`);
+}
+
 function getVisibleViewportHeight() {
   const vv = window.visualViewport;
 
@@ -169,6 +184,7 @@ function updateViewportVars() {
   }
 
   setCssVar("--cw-kb", isChatOpen() ? `${kb}px` : "0px");
+  updateBrowserSpecificViewportVars();
 }
 
 (function initViewportVars() {

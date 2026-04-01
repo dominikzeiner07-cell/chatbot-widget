@@ -10,6 +10,7 @@
 :root {
   --cw-vh: 100vh;
   --cw-kb: 0px; /* wird per JS gesetzt (Keyboard-Höhe) */
+  --cw-mobile-safe-gap: 8px;
 
   --cw-bg: #ffffff;
   --cw-surface: #ffffff;
@@ -516,12 +517,12 @@ body {
   }
 
   .cw-window {
-    left: 8px;
-    right: 8px;
+    left: var(--cw-mobile-safe-gap);
+    right: var(--cw-mobile-safe-gap);
     width: auto;
 
-    top: 8px;
-    bottom: 8px;
+    top: var(--cw-mobile-safe-gap);
+    bottom: var(--cw-mobile-safe-gap);
 
     height: auto;
     max-height: none;
@@ -531,17 +532,17 @@ body {
   }
 
   .cw-modal-open .cw-window:not(.cw-hidden) {
-    top: max(8px, env(safe-area-inset-top));
-    bottom: max(8px, env(safe-area-inset-bottom));
+    top: max(var(--cw-mobile-safe-gap), env(safe-area-inset-top));
+    bottom: max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom));
     height: calc(
       var(--cw-vh)
-      - max(8px, env(safe-area-inset-top))
-      - max(8px, env(safe-area-inset-bottom))
+      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-top))
+      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom))
     );
     max-height: calc(
       var(--cw-vh)
-      - max(8px, env(safe-area-inset-top))
-      - max(8px, env(safe-area-inset-bottom))
+      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-top))
+      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom))
     );
   }
 
@@ -557,6 +558,7 @@ body {
     padding: 12px 14px;
   }
 }
+
 /* =============================================================== */
 /* LEGAL / PRIVACY HINWEIS (steht oben im Chat und scrollt weg)     */
 /* =============================================================== */
