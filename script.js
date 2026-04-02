@@ -128,12 +128,23 @@ function isChatOpen() {
 }
 
 function isMobileModalTarget() {
-  const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  const small =
-    window.matchMedia &&
-    (window.matchMedia("(max-width: 820px)").matches ||
-      window.matchMedia("(max-height: 900px)").matches);
-  return !!(coarse && small);
+  try {
+    const mm = window.matchMedia ? window.matchMedia.bind(window) : null;
+    const coarse = mm ? mm("(pointer: coarse)").matches : false;
+    const narrow = mm ? mm("(max-width: 820px)").matches : false;
+
+    const ua = String(window.navigator.userAgent || "");
+    const mobileUa =
+      /Android/i.test(ua) ||
+      /iPhone|iPad|iPod/i.test(ua) ||
+      /Mobile/i.test(ua);
+
+    const touchPoints = Number(window.navigator.maxTouchPoints || 0);
+
+    return !!(narrow && (coarse || mobileUa || touchPoints > 1));
+  } catch (_) {
+    return false;
+  }
 }
 
 function isIosSafari() {

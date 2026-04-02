@@ -510,7 +510,7 @@ body {
 /* - Fenster bleibt "widget-like" (Rand/Shadow sichtbar)            */
 /* - Keyboard-Push nur als Max-Height (nicht full-screen)           */
 /* =============================================================== */
-@media (max-width: 820px), (max-height: 900px) {
+@media (max-width: 820px) {
   #cw-launcher-wrap {
     right: 10px;
     bottom: calc(10px + env(safe-area-inset-bottom));
