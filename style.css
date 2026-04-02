@@ -510,53 +510,51 @@ body {
 /* - Fenster bleibt "widget-like" (Rand/Shadow sichtbar)            */
 /* - Keyboard-Push nur als Max-Height (nicht full-screen)           */
 /* =============================================================== */
-@media (max-width: 820px) {
-  #cw-launcher-wrap {
-    right: 10px;
-    bottom: calc(10px + env(safe-area-inset-bottom));
-  }
+html[data-cw-mobile="true"] #cw-launcher-wrap {
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+}
 
-  .cw-window {
-    left: var(--cw-mobile-safe-gap);
-    right: var(--cw-mobile-safe-gap);
-    width: auto;
+html[data-cw-mobile="true"] .cw-window {
+  left: var(--cw-mobile-safe-gap);
+  right: var(--cw-mobile-safe-gap);
+  width: auto;
 
-    top: var(--cw-mobile-safe-gap);
-    bottom: var(--cw-mobile-safe-gap);
+  top: var(--cw-mobile-safe-gap);
+  bottom: var(--cw-mobile-safe-gap);
 
-    height: auto;
-    max-height: none;
-    min-height: 0;
+  height: auto;
+  max-height: none;
+  min-height: 0;
 
-    border-radius: 18px;
-  }
+  border-radius: 18px;
+}
 
-  .cw-modal-open .cw-window:not(.cw-hidden) {
-    top: max(var(--cw-mobile-safe-gap), env(safe-area-inset-top));
-    bottom: max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom));
-    height: calc(
-      var(--cw-vh)
-      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-top))
-      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom))
-    );
-    max-height: calc(
-      var(--cw-vh)
-      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-top))
-      - max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom))
-    );
-  }
+html[data-cw-mobile="true"] .cw-modal-open .cw-window:not(.cw-hidden) {
+  top: max(var(--cw-mobile-safe-gap), env(safe-area-inset-top));
+  bottom: max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom));
+  height: calc(
+    var(--cw-vh)
+    - max(var(--cw-mobile-safe-gap), env(safe-area-inset-top))
+    - max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom))
+  );
+  max-height: calc(
+    var(--cw-vh)
+    - max(var(--cw-mobile-safe-gap), env(safe-area-inset-top))
+    - max(var(--cw-mobile-safe-gap), env(safe-area-inset-bottom))
+  );
+}
 
-  .cw-body {
-    padding: 16px;
-  }
+html[data-cw-mobile="true"] .cw-body {
+  padding: 16px;
+}
 
-  .cw-input {
-    font-size: 16px;
-  }
+html[data-cw-mobile="true"] .cw-input {
+  font-size: 16px;
+}
 
-  .cw-header {
-    padding: 12px 14px;
-  }
+html[data-cw-mobile="true"] .cw-header {
+  padding: 12px 14px;
 }
 
 /* =============================================================== */

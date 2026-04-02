@@ -160,6 +160,11 @@ function isIosSafari() {
 function updateBrowserSpecificViewportVars() {
   const safariInset = isIosSafari() ? 18 : 8;
   setCssVar("--cw-mobile-safe-gap", `${safariInset}px`);
+
+  document.documentElement.setAttribute(
+    "data-cw-mobile",
+    isMobileModalTarget() ? "true" : "false"
+  );
 }
 
 function getVisibleViewportHeight() {
