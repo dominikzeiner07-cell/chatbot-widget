@@ -49,7 +49,11 @@
   try {
     allowedOrigin = new URL(base).origin;
   } catch (_) {
-    allowedOrigin = "";
+    try {
+      allowedOrigin = new URL(scriptSrc).origin;
+    } catch (_) {
+      allowedOrigin = "";
+    }
   }
 
 function isMobile() {
@@ -155,8 +159,8 @@ function isMobile() {
 
   // message listener: iframe -> host
   function onMessage(ev) {
-    // Origin check (wichtig)
-    if (allowedOrigin && ev.origin !== allowedOrigin) return;
+    // Origin check (wichtig) – bei unbekanntem Origin alle Nachrichten ablehnen
+    if (!allowedOrigin || ev.origin !== allowedOrigin) return;
 
     var data = ev.data;
     if (!data || typeof data !== "object") return;
