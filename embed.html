@@ -114,15 +114,15 @@
     <main class="cw-body" id="cw-body" aria-live="polite"></main>
 
     <form class="cw-composer" id="cw-form">
-      <input
+      <textarea
         id="cw-input"
         class="cw-input"
-        type="text"
         maxlength="1000"
         autocomplete="off"
         placeholder="Schreib eine Nachricht…"
         aria-label="Nachricht eingeben"
-      />
+        rows="1"
+      ></textarea>
       <button id="cw-send" class="cw-send" type="submit" aria-label="Senden">
         <span class="cw-send-arrow">➤</span>
       </button>

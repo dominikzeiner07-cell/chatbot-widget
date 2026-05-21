@@ -384,7 +384,7 @@ body {
 .cw-composer {
   border-top: 1px solid var(--cw-border);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   padding: 8px;
   gap: 8px;
   background-color: var(--cw-surface);
@@ -400,6 +400,11 @@ body {
   border: 1px solid var(--cw-border);
   background-color: var(--cw-surface-2);
   color: var(--cw-text);
+  font-family: inherit;
+  min-height: 40px;
+  max-height: 144px;
+  overflow-y: auto;
+  resize: none;
 }
 .cw-input::placeholder {
   color: var(--cw-input-placeholder);

@@ -22,7 +22,7 @@ const headerAvatarFallback = document.getElementById("cw-avatar-fallback");
 const API_BASE =
   window.CHATBOT_API_BASE ||
   (window.CHATBOT_CONFIG && window.CHATBOT_CONFIG.apiBase) ||
-  "";
+  "http://localhost:5051";
 
 const API_BASE_CLEAN = API_BASE.replace(/\/+$/, "");
 const ASK_URL = API_BASE_CLEAN.endsWith("/ask") ? API_BASE_CLEAN : `${API_BASE_CLEAN}/ask`;
@@ -66,16 +66,6 @@ function isHttpUrlStr(u) {
   }
 }
 
-function toSafeHttpUrl(raw) {
-  try {
-    const u = new URL(String(raw || "").trim());
-    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-    return u.href; // WHATWG-re-serialisiert: " → %22, verhindert CSS-Injection
-  } catch (_) {
-    return null;
-  }
-}
-
 // Wenn bodyEl noch nicht da ist, merken wir uns, dass wir später einfügen müssen
 let legalHintPending = false;
 
@@ -103,29 +93,14 @@ function ensureLegalHint() {
   const privacy = String(widgetState?.settings?.privacy_url || "").trim();
   const hasLink = privacy && isHttpUrlStr(privacy);
 
-  // DOM-sicher aufbauen – kein innerHTML (XSS-Prävention für privacy_url)
-  while (el.firstChild) el.removeChild(el.firstChild);
+  const line1 =
+    "Um deine Anfrage zu bearbeiten und unseren Service zu verbessern, verarbeiten wir Daten im Rahmen dieses Chats.";
 
-  el.appendChild(document.createTextNode(
-    "Um deine Anfrage zu bearbeiten und unseren Service zu verbessern, verarbeiten wir Daten im Rahmen dieses Chats."
-  ));
-  el.appendChild(document.createElement("br"));
+  const line2 = hasLink
+    ? `Weitere Informationen findest du in unserer <a class="cw-legal-link" href="${privacy}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
+    : "Weitere Informationen findest du in unserer Datenschutzerklärung.";
 
-  if (hasLink) {
-    el.appendChild(document.createTextNode("Weitere Informationen findest du in unserer "));
-    const a = document.createElement("a");
-    a.className = "cw-legal-link";
-    a.href = privacy;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.textContent = "Datenschutzerklärung";
-    el.appendChild(a);
-    el.appendChild(document.createTextNode("."));
-  } else {
-    el.appendChild(document.createTextNode(
-      "Weitere Informationen findest du in unserer Datenschutzerklärung."
-    ));
-  }
+  el.innerHTML = `${line1}<br>${line2}`;
 }
 
 // Falls ensureLegalHint zu früh kam (bodyEl noch null), fügen wir es nach DOM-Ready sicher ein
@@ -433,7 +408,7 @@ function applyThemeColors({ header_color, accent_color, text_color_mode }) {
 }
 
 function applyHeaderAvatar(url) {
-  const u = toSafeHttpUrl(url);
+  const u = String(url || "").trim();
 
   if (headerAvatarImg && u) {
     headerAvatarImg.src = u;
@@ -537,7 +512,7 @@ function createMessageRow({ sender, text }) {
     avatar.classList.add("cw-avatar-user");
     avatar.textContent = widgetState.settings.user_label || "DU";
   } else {
-    const url = toSafeHttpUrl(widgetState.settings.avatar_url);
+    const url = String(widgetState.settings.avatar_url || "").trim();
     if (url) {
       avatar.textContent = "";
       avatar.style.backgroundImage = `url("${url}")`;
@@ -582,7 +557,7 @@ function showTypingIndicator() {
   const avatar = document.createElement("div");
   avatar.className = "cw-avatar";
 
-  const url = toSafeHttpUrl(widgetState.settings.avatar_url);
+  const url = String(widgetState.settings.avatar_url || "").trim();
   if (url) {
     avatar.textContent = "";
     avatar.style.backgroundImage = `url("${url}")`;
@@ -634,18 +609,24 @@ async function fetchBotReply(userText) {
     });
 
     if (!res.ok) {
-      if (res.status === 401) return "Leider konnte deine Anfrage nicht verarbeitet werden.";
+      if (res.status === 401) return "Auth-Fehler – Widget-Key prüfen.";
       if (res.status === 429) {
         let errData = null;
         try { errData = await res.json(); } catch (_) {}
         return errData?.message || "Zu viele Anfragen. Bitte kurz warten und dann erneut versuchen.";
       }
-      return "Es gab ein Problem bei der Verbindung. Bitte später erneut versuchen.";
+
+      let fallback = `Serverfehler (${res.status}).`;
+      try {
+        const errData = await res.json();
+        if (errData && (errData.error || errData.message)) fallback = errData.message || errData.error;
+      } catch (_) {}
+      return fallback;
     }
 
     const data = await res.json();
     if (data.reply) return data.reply;
-    if (data.error) return "Es ist ein Fehler aufgetreten. Bitte später erneut versuchen.";
+    if (data.error) return "Fehler: " + data.error;
     return "Keine Antwort erhalten.";
   } catch (err) {
     console.error("Fetch-/Netzwerkfehler:", err);
@@ -741,6 +722,22 @@ function applyWidgetSettings(settings) {
   inputEl.setAttribute("enterkeyhint", "send");
 })();
 
+// AUTO-RESIZE TEXTAREA -------------------------------------------
+function autoResizeInput() {
+  if (!inputEl) return;
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 144) + "px";
+}
+
+inputEl?.addEventListener("input", autoResizeInput);
+
+inputEl?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    formEl?.requestSubmit();
+  }
+});
+
 // UI-AKTIONEN -----------------------------------------------------
 launcherBtn?.addEventListener("click", () => {
   const isHidden = chatWindow.classList.contains("cw-hidden");
@@ -777,6 +774,7 @@ formEl?.addEventListener("submit", async (e) => {
 
   appendMessage("user", userText);
   inputEl.value = "";
+  autoResizeInput();
 
   const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   if (isCoarse) inputEl.blur();
@@ -819,12 +817,6 @@ formEl?.addEventListener("submit", async (e) => {
   if (!WIDGET_KEY) {
     setWidgetReady();
     appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
-    return;
-  }
-
-  if (!API_BASE) {
-    setWidgetReady();
-    appendMessage("bot", "Widget-Konfigurationsfehler: API-Adresse fehlt.");
     return;
   }
 
