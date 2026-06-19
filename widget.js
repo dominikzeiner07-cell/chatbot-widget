@@ -35,7 +35,7 @@
   var BASE_W = 480;
   var BASE_H = 860;
 
-  var CACHE_BUST = "v6";
+  var CACHE_BUST = "v7";
   var src =
     base +
     "/embed.html" +
@@ -157,6 +157,52 @@ function isMobile() {
     prev = null;
   }
 
+  // -------------------------------
+  // IFRAME GRÖSSE (Klick-Blocker vermeiden)
+  // -------------------------------
+  // Geschlossen: iframe schrumpft auf die Launcher-/Greeting-Fläche unten rechts,
+  //   damit der Rest der Host-Seite wieder klickbar ist.
+  // Geöffnet:   iframe expandiert auf die volle Chat-Größe.
+  var iframeEl = null;
+  var isOpen = false;
+  var collapsedW = 140; // sinnvoller Default bis das iframe seine echte Größe meldet
+  var collapsedH = 140;
+
+  function applySize() {
+    if (!iframeEl) return;
+
+    if (isOpen) {
+      if (isMobile()) {
+        // Mobile offen: ganze sichtbare Fläche
+        iframeEl.style.width = "100vw";
+        iframeEl.style.height = window.innerHeight + "px";
+        iframeEl.style.maxWidth = "100vw";
+        iframeEl.style.maxHeight = window.innerHeight + "px";
+        updateIframeViewportHeight(iframeEl);
+      } else {
+        // Desktop offen: Arbeitsfläche + PAD für Schatten
+        iframeEl.style.width = "min(calc(" + (BASE_W + PAD) + "px), 100vw)";
+        iframeEl.style.height = "min(calc(" + (BASE_H + PAD) + "px), 100vh)";
+        iframeEl.style.maxWidth = "100vw";
+        iframeEl.style.maxHeight = "100vh";
+      }
+    } else {
+      // Geschlossen (Desktop & Mobile): nur die Bubble-Fläche blockieren
+      var w = Math.max(60, collapsedW || 140);
+      var h = Math.max(60, collapsedH || 140);
+      iframeEl.style.width = "min(" + w + "px, 100vw)";
+      iframeEl.style.height = "min(" + h + "px, 100vh)";
+      iframeEl.style.maxWidth = "100vw";
+      iframeEl.style.maxHeight = "100vh";
+    }
+
+    iframeEl.style.right = "0";
+    iframeEl.style.bottom = "0";
+
+    // Desktop ist nie gelockt – defensiv entsperren (z.B. nach Mobile->Desktop resize)
+    if (!isMobile()) unlockHostScroll();
+  }
+
   // message listener: iframe -> host
   function onMessage(ev) {
     // Origin check (wichtig) – bei unbekanntem Origin alle Nachrichten ablehnen
@@ -166,11 +212,22 @@ function isMobile() {
     if (!data || typeof data !== "object") return;
     if (data.type !== "CW_MODAL") return;
 
-    // Nur Mobile sperren (Desktop bleibt wie früher)
-    if (!isMobile()) return;
+    isOpen = !!data.open;
 
-    if (data.open) lockHostScroll();
-    else unlockHostScroll();
+    // Im geschlossenen Zustand meldet das iframe seine Bubble-Größe mit,
+    // damit wir den iframe darauf schrumpfen und Klicks wieder durchlassen.
+    if (!isOpen) {
+      if (typeof data.width === "number" && isFinite(data.width)) collapsedW = data.width;
+      if (typeof data.height === "number" && isFinite(data.height)) collapsedH = data.height;
+    }
+
+    applySize();
+
+    // Scroll-Lock nur Mobile (Desktop bleibt wie früher)
+    if (isMobile()) {
+      if (isOpen) lockHostScroll();
+      else unlockHostScroll();
+    }
   }
 
   window.addEventListener("message", onMessage);
@@ -197,33 +254,7 @@ function isMobile() {
     iframe.style.zIndex = "2147483647";
     iframe.style.display = "block";
 
-    function applySize() {
-      if (isMobile()) {
-  // Mobile: iframe immer ganze sichtbare Fläche
-  iframe.style.width = "100vw";
-  iframe.style.height = window.innerHeight + "px";
-  iframe.style.maxWidth = "100vw";
-  iframe.style.maxHeight = window.innerHeight + "px";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-
-  updateIframeViewportHeight(iframe);
-} else {
-        // Desktop: wie vorher (Arbeitsfläche + PAD für Schatten)
-        iframe.style.width = (BASE_W + PAD) + "px";
-        iframe.style.height = (BASE_H + PAD) + "px";
-
-        iframe.style.width = "min(calc(" + (BASE_W + PAD) + "px), 100vw)";
-        iframe.style.height = "min(calc(" + (BASE_H + PAD) + "px), 100vh)";
-
-        iframe.style.maxWidth = "100vw";
-        iframe.style.maxHeight = "100vh";
-
-        // Falls man von Mobile->Desktop resized: sicherheitshalber unlock
-        unlockHostScroll();
-      }
-    }
-
+    iframeEl = iframe;
     applySize();
 window.addEventListener("resize", applySize, { passive: true });
 window.addEventListener("orientationchange", function () {

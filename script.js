@@ -228,12 +228,42 @@ function updateViewportVars() {
 // ----------------------------------------------------------
 // MODAL MODE
 // ----------------------------------------------------------
+// Größe (Breite/Höhe) der sichtbaren Bubble-Fläche im geschlossenen Zustand.
+// Wird viewport-unabhängig über offsetWidth/offsetHeight gemessen (kein Feedback-
+// Loop mit der iframe-Größe), damit der Host den iframe darauf schrumpfen kann.
+function computeCollapsedSize() {
+  const buffer = 90; // Platz für Inset zur Bildschirmkante + Schatten
+  let w = 140;
+  let h = 140;
+  try {
+    if (launcherWrap) {
+      const ow = launcherWrap.offsetWidth || 0;
+      const oh = launcherWrap.offsetHeight || 0;
+      if (ow > 0) w = Math.ceil(ow + buffer);
+      if (oh > 0) h = Math.ceil(oh + buffer);
+    }
+  } catch (_) {}
+  return { width: w, height: h };
+}
+
 function notifyParentModal(open) {
   try {
     if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: "CW_MODAL", open: !!open }, "*");
+      const msg = { type: "CW_MODAL", open: !!open };
+      if (!open) {
+        const s = computeCollapsedSize();
+        msg.width = s.width;
+        msg.height = s.height;
+      }
+      window.parent.postMessage(msg, "*");
     }
   } catch (_) {}
+}
+
+// Re-meldet die Collapsed-Größe an den Host (nur wenn der Chat zu ist),
+// z.B. wenn das Greeting ein-/ausgeblendet wird und sich die Fläche ändert.
+function syncCollapsedSize() {
+  if (!isChatOpen()) notifyParentModal(false);
 }
 
 function setModalOpen(open) {
@@ -287,6 +317,7 @@ function scheduleGreetingAutoHide() {
   if (greetingAutoHideTimer) clearTimeout(greetingAutoHideTimer);
   greetingAutoHideTimer = setTimeout(() => {
     if (greetingEl) greetingEl.style.display = "none";
+    syncCollapsedSize();
   }, 8000);
 }
 
@@ -702,6 +733,9 @@ function applyWidgetSettings(settings) {
     }
   }
 
+  // Bubble-Fläche kann sich durch das Greeting geändert haben → Host informieren
+  syncCollapsedSize();
+
   applyHeaderAvatar(widgetState.settings.avatar_url);
   applyThemeColors(widgetState.settings);
   applyWidgetThemeMode(widgetState.settings.theme_mode);
@@ -758,6 +792,7 @@ closeBtn?.addEventListener("click", () => {
 
 greetingCloseBtn?.addEventListener("click", () => {
   if (greetingEl) greetingEl.style.display = "none";
+  syncCollapsedSize();
 });
 
 // Nachricht absenden ----------------------------------------------
@@ -817,6 +852,7 @@ formEl?.addEventListener("submit", async (e) => {
   if (!WIDGET_KEY) {
     setWidgetReady();
     appendMessage("bot", "Widget-Key fehlt. Bitte im Snippet setzen (CHATBOT_WIDGET_KEY).");
+    syncCollapsedSize();
     return;
   }
 
@@ -841,4 +877,7 @@ formEl?.addEventListener("submit", async (e) => {
   appendMessage("bot", first);
 
   updateViewportVars();
+
+  // Host die initiale Bubble-Fläche melden, damit der iframe sofort schrumpft
+  syncCollapsedSize();
 })();
