@@ -724,8 +724,12 @@ function applyWidgetSettings(settings) {
   const greetText = String(widgetState.settings.greeting_text || "").trim();
   if (greetTextEl) greetTextEl.textContent = greetText;
 
+  // Greeting nur zeigen, wenn der Loader es erlaubt (Startseite, 1x/Session).
+  // fail-open: nur bei explizitem false unterdrücken.
+  const allowGreeting = window.CW_ALLOW_GREETING !== false;
+
   if (greetingEl) {
-    if (greetText) {
+    if (greetText && allowGreeting) {
       greetingEl.style.display = "flex";
       scheduleGreetingAutoHide();
     } else {

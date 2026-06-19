@@ -137,6 +137,11 @@
     window.CHATBOT_WIDGET_KEY = sp.get("widget_key") || "";
     window.CHATBOT_API_BASE = sp.get("api_base") || "";
 
+    // Greeting-Gating (vom Loader widget.js gesetzt): nur Startseite, 1x/Session.
+    // Fehlt der Param (alter gecachter Loader), Default = true -> bisheriges Verhalten.
+    var cwGreetingParam = sp.get("greeting");
+    window.CW_ALLOW_GREETING = (cwGreetingParam === null) ? true : (cwGreetingParam === "1");
+
     // Cache bust (kommt aus widget.js als cb=v6)
     var cb = sp.get("cb") || "";
 

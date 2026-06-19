@@ -36,12 +36,70 @@
   var BASE_H = 860;
 
   var CACHE_BUST = "v7";
+
+  // -------------------------------
+  // GREETING-GATING (nur Startseite, 1x pro Session)
+  // -------------------------------
+  // Die Startseiten-Entscheidung muss hier fallen, weil nur der Loader die echte
+  // Host-URL kennt (der iframe sieht nur embed.html). Ergebnis geht via &greeting
+  // an den iframe.
+  function isHomePath() {
+    try {
+      var cfg = window.CHATBOT_CONFIG || {};
+      var custom = cfg.greetingPaths;
+      var path = String(location.pathname || "/").toLowerCase();
+
+      // Expliziter Override per Config (exakte Pfade)
+      if (Array.isArray(custom) && custom.length) {
+        var norm = path.replace(/\/+$/, "") || "/";
+        for (var i = 0; i < custom.length; i++) {
+          var c = String(custom[i] || "").toLowerCase().replace(/\/+$/, "") || "/";
+          if (norm === c) return true;
+        }
+        return false;
+      }
+
+      // Heuristik: Root, Index-Datei oder reiner Sprach-Root gilt als Startseite
+      var p = path.replace(/\/+$/, "");
+      if (p === "") return true; // "/"
+
+      var seg = p.split("/").filter(Boolean);
+      var homeNames = ["index.html", "index.htm", "index.php", "index", "home", "start", "startseite"];
+      var localeRe = /^[a-z]{2}(-[a-z]{2})?$/;
+
+      if (seg.length === 1 && localeRe.test(seg[0])) return true; // /de
+
+      var last = seg[seg.length - 1];
+      if (homeNames.indexOf(last) !== -1) {
+        if (seg.length === 1) return true;                          // /home
+        if (seg.length === 2 && localeRe.test(seg[0])) return true; // /de/home
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  var GREETING_SEEN_KEY = "cw_greeting_seen";
+
+  function greetingAlreadySeen() {
+    try { return sessionStorage.getItem(GREETING_SEEN_KEY) === "1"; } catch (_) { return false; }
+  }
+  function markGreetingSeen() {
+    try { sessionStorage.setItem(GREETING_SEEN_KEY, "1"); } catch (_) {}
+  }
+
+  // Nur auf der Startseite und nur einmal pro Tab-Session
+  var allowGreeting = isHomePath() && !greetingAlreadySeen();
+  if (allowGreeting) markGreetingSeen();
+
   var src =
     base +
     "/embed.html" +
     "?widget_key=" + encodeURIComponent(WIDGET_KEY) +
     "&api_base=" + encodeURIComponent(API_BASE) +
     "&pad=" + encodeURIComponent(String(PAD)) +
+    "&greeting=" + (allowGreeting ? "1" : "0") +
     "&cb=" + encodeURIComponent(CACHE_BUST);
 
   // Origin vom Widget (für postMessage-Validation)
