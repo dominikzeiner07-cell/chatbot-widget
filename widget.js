@@ -149,7 +149,6 @@ function isMobile() {
   // SCROLL LOCK (Host Page)
   // -------------------------------
   var scrollLocked = false;
-  var savedScrollY = 0;
   var prev = null;
 
   function preventScroll(e) {
@@ -162,31 +161,27 @@ function isMobile() {
     if (!document.documentElement || !document.body) return;
 
     scrollLocked = true;
-    savedScrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
 
     prev = {
       htmlOverflow: document.documentElement.style.overflow,
       bodyOverflow: document.body.style.overflow,
-      bodyPosition: document.body.style.position,
-      bodyTop: document.body.style.top,
-      bodyLeft: document.body.style.left,
-      bodyRight: document.body.style.right,
-      bodyWidth: document.body.style.width,
       bodyTouchAction: document.body.style.touchAction,
+      bodyOverscroll: document.body.style.overscrollBehavior,
     };
 
+    // WICHTIG: KEIN position:fixed mehr.
+    // Der Body wird NICHT mehr verschoben -> es gibt keinen Scroll-Offset zu
+    // kompensieren und damit kein Zucken beim Öffnen/Schließen.
+    // Auf Mobile deckt der iframe ohnehin den ganzen Viewport ab; das Scroll-
+    // Chaining aus dem Chat heraus wird über overscroll-behavior verhindert
+    // (.cw-body: contain, iframe-Dokument: none).
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
-
-    // iOS-safe Lock: body fixed + offset
-    document.body.style.position = "fixed";
-    document.body.style.top = (-savedScrollY) + "px";
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.width = "100%";
     document.body.style.touchAction = "none";
+    document.body.style.overscrollBehavior = "none";
 
-    // Extra Schutz gegen "scroll bleed"
+    // Belt & Suspenders gegen "scroll bleed" auf Bereichen, die der iframe
+    // (z.B. bei kollabierender URL-Bar) kurz nicht abdeckt.
     window.addEventListener("touchmove", preventScroll, { passive: false });
     window.addEventListener("wheel", preventScroll, { passive: false });
   }
@@ -200,18 +195,12 @@ function isMobile() {
     window.removeEventListener("touchmove", preventScroll);
     window.removeEventListener("wheel", preventScroll);
 
-    // restore styles
+    // Styles zurücksetzen (Body-Position wurde nie verändert -> kein scrollTo nötig)
     document.documentElement.style.overflow = prev ? prev.htmlOverflow : "";
     document.body.style.overflow = prev ? prev.bodyOverflow : "";
-    document.body.style.position = prev ? prev.bodyPosition : "";
-    document.body.style.top = prev ? prev.bodyTop : "";
-    document.body.style.left = prev ? prev.bodyLeft : "";
-    document.body.style.right = prev ? prev.bodyRight : "";
-    document.body.style.width = prev ? prev.bodyWidth : "";
     document.body.style.touchAction = prev ? prev.bodyTouchAction : "";
+    document.body.style.overscrollBehavior = prev ? prev.bodyOverscroll : "";
 
-    // restore scroll position
-    window.scrollTo(0, savedScrollY);
     prev = null;
   }
 

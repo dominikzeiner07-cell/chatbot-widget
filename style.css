@@ -404,6 +404,7 @@ body {
   min-height: 40px;
   max-height: 144px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   resize: none;
 }
 .cw-input::placeholder {
