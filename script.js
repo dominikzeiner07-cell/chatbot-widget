@@ -531,6 +531,61 @@ function mergeSettings(base, incoming) {
 // ----------------------------------------------------------
 // CHAT UI HELPERS
 // ----------------------------------------------------------
+
+// Minimaler Markdown-Renderer für Bot-Antworten (Backend instruiert das Modell,
+// bei mehreren Punkten/Schritten Listen + **fette Labels** zu nutzen).
+// Sicherheit: Text wird IMMER zuerst HTML-escaped, erst danach werden die
+// Markdown-Muster in Tags umgesetzt – es kann kein fremdes HTML durchrutschen.
+function escapeHtml(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function mdBold(escapedLine) {
+  return escapedLine.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+function renderBotMarkdown(text) {
+  const lines = escapeHtml(text).split(/\r?\n/);
+  const parts = [];
+  let list = null; // { tag: "ul"|"ol", items: [] }
+
+  const flushList = () => {
+    if (!list) return;
+    parts.push(
+      "<" + list.tag + ' class="cw-list">' +
+      list.items.map((i) => "<li>" + i + "</li>").join("") +
+      "</" + list.tag + ">"
+    );
+    list = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    const ul = line.match(/^[-*•]\s+(.+)$/);
+    const ol = line.match(/^\d{1,2}[.)]\s+(.+)$/);
+
+    if (ul || ol) {
+      const tag = ul ? "ul" : "ol";
+      if (!list || list.tag !== tag) {
+        flushList();
+        list = { tag: tag, items: [] };
+      }
+      list.items.push(mdBold(ul ? ul[1] : ol[1]));
+    } else {
+      flushList();
+      if (line) parts.push('<p class="cw-p">' + mdBold(line) + "</p>");
+    }
+  }
+  flushList();
+
+  return parts.join("");
+}
+
 function createMessageRow({ sender, text }) {
   const row = document.createElement("div");
   row.className = "cw-row";
@@ -557,7 +612,13 @@ function createMessageRow({ sender, text }) {
 
   const bubble = document.createElement("div");
   bubble.className = "cw-msg";
-  bubble.textContent = text;
+
+  // Nur Bot-Nachrichten als Markdown rendern; User-Eingaben bleiben reiner Text.
+  if (sender === "user") {
+    bubble.textContent = text;
+  } else {
+    bubble.innerHTML = renderBotMarkdown(String(text || ""));
+  }
 
   row.appendChild(avatar);
   row.appendChild(bubble);
