@@ -57,12 +57,16 @@ const widgetState = {
 // ----------------------------------------------------------
 // LEGAL HINWEIS (immer anzeigen; Link nur wenn privacy_url da)
 // ----------------------------------------------------------
-function isHttpUrlStr(u) {
+// Liefert eine attribut-sichere href für http/https-URLs, sonst "" (XSS-Schutz).
+// new URL().href percent-encoded '"', '<', '>' – kein Ausbruch aus dem
+// href-Attribut möglich; '&' escapen wir zusätzlich defensiv.
+function safeHttpHref(u) {
   try {
     const url = new URL(String(u || ""));
-    return url.protocol === "http:" || url.protocol === "https:";
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return url.href.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
   } catch (_) {
-    return false;
+    return "";
   }
 }
 
@@ -91,13 +95,14 @@ function ensureLegalHint() {
   }
 
   const privacy = String(widgetState?.settings?.privacy_url || "").trim();
-  const hasLink = privacy && isHttpUrlStr(privacy);
+  // Nie roh ins HTML einsetzen: nur http/https, serialisiert + attribut-escaped
+  const safeHref = safeHttpHref(privacy);
 
   const line1 =
     "Um deine Anfrage zu bearbeiten und unseren Service zu verbessern, verarbeiten wir Daten im Rahmen dieses Chats.";
 
-  const line2 = hasLink
-    ? `Weitere Informationen findest du in unserer <a class="cw-legal-link" href="${privacy}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
+  const line2 = safeHref
+    ? `Weitere Informationen findest du in unserer <a class="cw-legal-link" href="${safeHref}" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.`
     : "Weitere Informationen findest du in unserer Datenschutzerklärung.";
 
   el.innerHTML = `${line1}<br>${line2}`;
