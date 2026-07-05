@@ -694,6 +694,21 @@ function hideTypingIndicator() {
 // ----------------------------------------------------------
 // BACKEND CALL – /ask mit widget_key
 // ----------------------------------------------------------
+
+// Chat-Verlauf (letzte Frage-Antwort-Paare) für Folgefragen.
+// Lebt nur im Browser (kein Storage) und wird bei /ask mitgesendet,
+// damit der Bot z.B. "und was kostet das?" richtig zuordnen kann.
+const HISTORY_MAX_PAIRS = 3;
+const chatHistory = []; // { user, bot }
+
+function pushHistoryPair(userText, botText) {
+  chatHistory.push({
+    user: String(userText || "").slice(0, 2000),
+    bot: String(botText || "").slice(0, 4000),
+  });
+  while (chatHistory.length > HISTORY_MAX_PAIRS) chatHistory.shift();
+}
+
 async function fetchBotReply(userText) {
   try {
     const headers = { "Content-Type": "application/json" };
@@ -702,7 +717,11 @@ async function fetchBotReply(userText) {
     const res = await fetch(ASK_URL, {
       method: "POST",
       headers,
-      body: JSON.stringify({ message: userText, widget_key: WIDGET_KEY || undefined }),
+      body: JSON.stringify({
+        message: userText,
+        widget_key: WIDGET_KEY || undefined,
+        history: chatHistory.slice(),
+      }),
     });
 
     if (!res.ok) {
@@ -897,6 +916,9 @@ formEl?.addEventListener("submit", async (e) => {
 
   hideTypingIndicator();
   appendMessage("bot", replyText);
+
+  // Runde in den Verlauf aufnehmen (für die nächste Folgefrage)
+  pushHistoryPair(userText, replyText);
 
   setTimeout(() => {
     const b = getBodyEl();
